@@ -158,6 +158,18 @@ func NewEcho(args ...*Node) *Node {
 	return &Node{Op: OpEcho, Args: args}
 }
 
+func NewParens(x *Node) *Node {
+	return &Node{Op: OpParens, Args: []*Node{x}}
+}
+
+func NewAssign(lhs, rhs *Node) *Node {
+	return &Node{Op: OpAssign, Args: []*Node{lhs, rhs}}
+}
+
+func NewAssignModify(op Op, rhs, lhs *Node) *Node {
+	return &Node{Op: OpAssignModify, Value: op, Args: []*Node{lhs, rhs}}
+}
+
 func NewBoolLit(value bool) *Node {
 	return &Node{Op: OpBoolLit, Value: value}
 }
