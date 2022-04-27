@@ -21,7 +21,7 @@ func main() {
 	cmds := []subcmd.Command{
 		{
 			Name:        "version",
-			Description: "print phpsmith version info",
+			Description: "print phpsmith version info to stdout and exit",
 			Do:          versionMain,
 		},
 	}
