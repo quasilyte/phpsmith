@@ -39,7 +39,10 @@ func (g *generator) CreateProgram() *Program {
 
 func (g *generator) createFile(name string) *File {
 	f := &File{Name: name}
-	f.Nodes = append(f.Nodes, g.createFunc("main"))
+	for i := 0; i < 2; i++ {
+		funcName := fmt.Sprintf("func%d", i)
+		f.Nodes = append(f.Nodes, g.createFunc(funcName))
+	}
 	return f
 }
 
@@ -54,8 +57,16 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 
 	g.varNameSeq = 0
 	g.currentBlock = fn.Body
-	for i := 0; i < 8; i++ {
-		g.pushVarDecl(g.genVarname())
+
+	blockVars := make([]string, 6)
+	for i := range blockVars {
+		blockVars[i] = g.genVarname()
+		g.pushVarDecl(blockVars[i])
+	}
+	for _, name := range blockVars {
+		v := g.scope.FindVarByName(name)
+		varDump := ir.NewCall(ir.NewName("var_dump"), ir.NewVar(name, v.typ))
+		g.currentBlock.Args = append(g.currentBlock.Args, varDump)
 	}
 
 	return fn

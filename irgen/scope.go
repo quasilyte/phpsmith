@@ -39,6 +39,12 @@ func (s *scope) FindVarOfType(typ ir.Type) *scopeVar {
 	})
 }
 
+func (s *scope) FindVarByName(name string) *scopeVar {
+	return s.FindVar(func(v *scopeVar) bool {
+		return v.name == name
+	})
+}
+
 func (s *scope) FindVar(predicate func(*scopeVar) bool) *scopeVar {
 	seen := make(map[string]struct{})
 	for i := len(s.vars) - 1; i >= 0; i-- {
