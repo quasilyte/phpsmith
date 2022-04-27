@@ -78,7 +78,6 @@ const (
 	// $Value.(float64)
 	OpFloatLit
 	// $Value.(string)
-	// Note: quoted in '
 	OpStringLit
 
 	// $Value.(string) contains a variable name

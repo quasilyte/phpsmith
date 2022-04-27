@@ -2,6 +2,7 @@ package irprint
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"math/rand"
@@ -151,8 +152,46 @@ func (p *printer) printNodes(nodes []*ir.Node, sep string) {
 	}
 }
 
-func (p *printer) printString(s *ir.Node) {
-	p.w.WriteByte('\'')
-	p.w.WriteString(s.Value.(string))
-	p.w.WriteByte('\'')
+func (p *printer) printString(n *ir.Node) {
+	s := n.Value.(string)
+	var buf bytes.Buffer
+	buf.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		switch ch {
+		case '\r':
+			buf.WriteString(`\r`)
+		case '\n':
+			buf.WriteString(`\n`)
+		case '"':
+			buf.WriteString(`\"`)
+		case '\\':
+			buf.WriteString(`\\`)
+		case 0:
+			buf.WriteString(`\000`)
+		case '\a':
+			buf.WriteString(`\a`)
+		case '\b':
+			buf.WriteString(`\b`)
+		case '\f':
+			buf.WriteString(`\f`)
+		case '\t':
+			buf.WriteString(`\t`)
+		case '\v':
+			buf.WriteString(`\v`)
+		default:
+			if ch < 32 {
+				buf.WriteString(`\0`)
+				buf.WriteByte('0' + ch/8)
+				buf.WriteByte('0' + ch%8)
+			} else {
+				buf.WriteByte(ch)
+			}
+		}
+	}
+
+	quote := byte('"')
+	p.w.WriteByte(quote)
+	p.w.Write(buf.Bytes())
+	p.w.WriteByte(quote)
 }

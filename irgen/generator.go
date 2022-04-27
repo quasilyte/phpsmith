@@ -18,7 +18,7 @@ type generator struct {
 	scope *scope
 
 	symtab *symbolTable
-	picker *picker
+	expr   *exprGenerator
 }
 
 func newGenerator(config *Config) *generator {
@@ -28,7 +28,7 @@ func newGenerator(config *Config) *generator {
 		config: config,
 		symtab: symtab,
 		scope:  s,
-		picker: newPicker(config, s, symtab),
+		expr:   newExprGenerator(config, s, symtab),
 	}
 }
 
@@ -68,9 +68,9 @@ func (g *generator) genVarname() string {
 }
 
 func (g *generator) pushVarDecl(name string) {
-	typ := g.picker.PickScalarType()
+	typ := g.expr.PickScalarType()
 	lhs := ir.NewVar(name, typ)
-	rhs := g.picker.PickValueOfType(typ)
+	rhs := g.expr.GenerateValueOfType(typ)
 	assign := ir.NewAssign(lhs, rhs)
 	g.currentBlock.Args = append(g.currentBlock.Args, assign)
 	g.scope.PushVar(name, typ)
