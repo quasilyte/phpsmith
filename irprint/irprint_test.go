@@ -24,9 +24,9 @@ func TestPrintNodePretty(t *testing.T) {
 		{ir.NewFloatLit(-1.4), `-1.4`},
 
 		// TODO: more string tests when printer handles them correctly.
-		{ir.NewStringLit(""), `''`},
-		{ir.NewStringLit("123"), `'123'`},
-		{ir.NewStringLit("\\n"), `'\n'`},
+		{ir.NewStringLit(""), `""`},
+		{ir.NewStringLit("123"), `"123"`},
+		{ir.NewStringLit("\\n"), `"\\n"`},
 
 		{ir.NewEcho(ir.NewVar("foo", intType)), `echo $foo`},
 		{ir.NewEcho(ir.NewVar("foo", intType), ir.NewBoolLit(false)), `echo $foo, false`},
@@ -40,7 +40,7 @@ func TestPrintNodePretty(t *testing.T) {
 		{
 			ir.NewBlock(ir.NewEcho(ir.NewStringLit("ok"))),
 			`{
-  echo 'ok';
+  echo "ok";
 }
 `,
 		},
