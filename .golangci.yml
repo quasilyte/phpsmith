@@ -15,3 +15,5 @@ linters:
     - staticcheck
     - revive
     - gofmt
+  disable:
+    - errcheck
