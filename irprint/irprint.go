@@ -124,23 +124,61 @@ func (p *printer) printNode(n *ir.Node) {
 
 	case ir.OpVar:
 		p.w.WriteString("$" + n.Value.(string))
+	case ir.OpName:
+		p.w.WriteString(n.Value.(string))
 
 	case ir.OpAssign:
-		p.printBinary(n.Args, "=")
+		p.printBinary(n, "=")
 
 	case ir.OpAdd:
-		p.printBinary(n.Args, "+")
+		p.printBinary(n, "+")
 	case ir.OpSub:
-		p.printBinary(n.Args, "-")
+		p.printBinary(n, "-")
 	case ir.OpConcat:
-		p.printBinary(n.Args, ".")
+		p.printBinary(n, ".")
+
+	case ir.OpAnd:
+		p.printBinary(n, "&&")
+	case ir.OpOr:
+		p.printBinary(n, "||")
+
+	case ir.OpNot:
+		p.printUnaryPrefix(n, "!")
+
+	case ir.OpParens:
+		p.w.WriteByte('(')
+		p.printNode(n.Args[0])
+		p.w.WriteByte(')')
+
+	case ir.OpTernary:
+		p.printNode(n.Args[0])
+		p.w.WriteString(" ? ")
+		p.printNode(n.Args[1])
+		p.w.WriteString(" : ")
+		p.printNode(n.Args[2])
+
+	case ir.OpCall:
+		p.printNode(n.Args[0])
+		p.w.WriteByte('(')
+		for i, arg := range n.Args[1:] {
+			if i != 0 {
+				p.w.WriteString(", ")
+			}
+			p.printNode(arg)
+		}
+		p.w.WriteByte(')')
 	}
 }
 
-func (p *printer) printBinary(args []*ir.Node, op string) {
-	p.printNode(args[0])
+func (p *printer) printUnaryPrefix(n *ir.Node, op string) {
+	p.w.WriteString(op)
+	p.printNode(n.Args[0])
+}
+
+func (p *printer) printBinary(n *ir.Node, op string) {
+	p.printNode(n.Args[0])
 	p.w.WriteString(" " + op + " ")
-	p.printNode(args[1])
+	p.printNode(n.Args[1])
 }
 
 func (p *printer) printNodes(nodes []*ir.Node, sep string) {

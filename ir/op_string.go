@@ -28,17 +28,22 @@ func _() {
 	_ = x[OpFloatLit-17]
 	_ = x[OpStringLit-18]
 	_ = x[OpVar-19]
-	_ = x[OpProp-20]
-	_ = x[OpIndex-21]
-	_ = x[OpConcat-22]
-	_ = x[OpAdd-23]
-	_ = x[OpSub-24]
-	_ = x[OpCall-25]
+	_ = x[OpName-20]
+	_ = x[OpNot-21]
+	_ = x[OpProp-22]
+	_ = x[OpIndex-23]
+	_ = x[OpConcat-24]
+	_ = x[OpAdd-25]
+	_ = x[OpSub-26]
+	_ = x[OpAnd-27]
+	_ = x[OpOr-28]
+	_ = x[OpTernary-29]
+	_ = x[OpCall-30]
 }
 
-const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitVarPropIndexConcatAddSubCall"
+const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitVarNameNotPropIndexConcatAddSubAndOrTernaryCall"
 
-var _Op_index = [...]uint8{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 125, 129, 134, 140, 143, 146, 150}
+var _Op_index = [...]uint8{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 125, 129, 132, 136, 141, 147, 150, 153, 156, 158, 165, 169}
 
 func (i Op) String() string {
 	if i < 0 || i >= Op(len(_Op_index)-1) {

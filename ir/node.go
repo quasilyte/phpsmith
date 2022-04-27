@@ -84,6 +84,12 @@ const (
 	// $Type contains a variable type
 	OpVar
 
+	// $Value.(string) contains a symbol name
+	OpName
+
+	// '!' $Args[0]
+	OpNot
+
 	// $Args[0] '->' $Value.(string)
 	OpProp
 
@@ -96,6 +102,14 @@ const (
 	OpAdd
 	// $Args[0] '-' $Args[1]
 	OpSub
+
+	// $Args[0] '&&' $Args[1]
+	OpAnd
+	// $Args[0] '||' $Args[1]
+	OpOr
+
+	// $Args[0] '?' $Args[1] ':' $Args[2]
+	OpTernary
 
 	// $Args[0] '(' $Args[1:]... ')'
 	OpCall
@@ -189,6 +203,14 @@ func NewVar(name string, typ Type) *Node {
 	return &Node{Op: OpVar, Value: name, Type: typ}
 }
 
+func NewName(name string) *Node {
+	return &Node{Op: OpName, Value: name}
+}
+
+func NewNot(x *Node) *Node {
+	return &Node{Op: OpNot, Args: []*Node{x}}
+}
+
 func NewProp(obj *Node, propName string) *Node {
 	return &Node{Op: OpProp, Value: propName, Args: []*Node{obj}}
 }
@@ -207,6 +229,18 @@ func NewAdd(x, y *Node) *Node {
 
 func NewSub(x, y *Node) *Node {
 	return &Node{Op: OpSub, Args: []*Node{x, y}}
+}
+
+func NewAnd(x, y *Node) *Node {
+	return &Node{Op: OpAnd, Args: []*Node{x, y}}
+}
+
+func NewOr(x, y *Node) *Node {
+	return &Node{Op: OpOr, Args: []*Node{x, y}}
+}
+
+func NewTernary(cond, trueExpr, falseExpr *Node) *Node {
+	return &Node{Op: OpTernary, Args: []*Node{cond, trueExpr, falseExpr}}
 }
 
 func NewCall(fn *Node, args ...*Node) *Node {
