@@ -15,4 +15,4 @@ jobs:
       - name: Run linter
         run: make ci-lint
       - name: Run coverage
-        run: go test -cover -coverprofile=coverage.txt -count=10 -short
+        run: make test
