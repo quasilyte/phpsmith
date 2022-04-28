@@ -61,7 +61,7 @@ func cmdFuzz(args []string) error {
 
 func runner(ctx context.Context, dir string, seed int64) error {
 	for {
-		files, err := generate(dir, seed)
+		files, err := generate(dir, seed) // TODO add mutex
 		if err != nil {
 			return err
 		}
