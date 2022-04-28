@@ -210,17 +210,14 @@ func (g *exprGenerator) mixedValue() *ir.Node {
 }
 
 func (g *exprGenerator) newTernary(cond, x, y *ir.Node) *ir.Node {
-	if x.Op == ir.OpTernary {
+	if randutil.Bool(g.rand) {
 		x = ir.NewParens(x)
 	}
-	if y.Op == ir.OpTernary {
+	if randutil.Bool(g.rand) {
 		y = ir.NewParens(y)
 	}
 	ternary := ir.NewTernary(cond, x, y)
-	if randutil.Bool(g.rand) {
-		ternary = ir.NewParens(ternary)
-	}
-	return ternary
+	return ir.NewParens(ternary)
 }
 
 func (g *exprGenerator) intTernary() *ir.Node {
