@@ -264,7 +264,7 @@ func (g *exprGenerator) stringLit() *ir.Node {
 	count := randutil.IntRange(g.rand, 1, 6)
 	for i := 0; i < count; i++ {
 		ch := g.rand.Intn(unicode.MaxASCII)
-		if !unicode.IsPrint(rune(ch)) {
+		if !unicode.IsPrint(rune(ch)) || ch == '$' {
 			s.WriteString(stringLitValues[g.rand.Intn(len(stringLitValues))].Value.(string))
 		} else {
 			s.WriteByte(byte(ch))
@@ -307,12 +307,7 @@ func (g *exprGenerator) stringCall() *ir.Node {
 
 func (g *exprGenerator) intNegation() *ir.Node {
 	arg := g.intValue()
-	switch arg.Op {
-	case ir.OpIntLit:
-		if arg.Value.(int64) < 0 {
-			arg = ir.NewParens(arg)
-		}
-	case ir.OpNegation:
+	if !isSimpleNode(arg) {
 		arg = ir.NewParens(arg)
 	}
 	return ir.NewNegation(arg)
