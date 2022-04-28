@@ -119,7 +119,7 @@ const (
 	OpOrWord
 
 	// $Args[0] 'xor' $Args[1]
-	OpXor
+	OpXorWord
 
 	// $Args[0] '?' $Args[1] ':' $Args[2]
 	OpTernary
@@ -293,18 +293,6 @@ func NewCall(fn *Node, args ...*Node) *Node {
 	return &Node{Op: OpCall, Args: allArgs}
 }
 
-func NewOpAndWord(x, y *Node) *Node {
-	return &Node{Op: OpAndWord, Args: []*Node{x, y}}
-}
-
-func NewOpOrWord(x, y *Node) *Node {
-	return &Node{Op: OpOrWord, Args: []*Node{x, y}}
-}
-
-func NewOpXor(x, y *Node) *Node {
-	return &Node{Op: OpXor, Args: []*Node{x, y}}
-}
-
 func NewLess(x, y *Node) *Node {
 	return &Node{Op: OpLess, Args: []*Node{x, y}}
 }
@@ -353,6 +341,6 @@ func NewOrWord(x, y *Node) *Node {
 	return &Node{Op: OpOrWord, Args: []*Node{x, y}}
 }
 
-func NewXor(x, y *Node) *Node {
-	return &Node{Op: OpXor, Args: []*Node{x, y}}
+func NewXorWord(x, y *Node) *Node {
+	return &Node{Op: OpXorWord, Args: []*Node{x, y}}
 }
