@@ -125,7 +125,7 @@ func fuzzingProcess(ctx context.Context, dir string, seed int64) error {
 	}
 
 	if diff := cmp.Diff(results[0].Output, results[1].Output); diff != "" {
-		l, err := os.OpenFile(dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
+		l, err := os.OpenFile("./"+dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
 		if err != nil {
 			log.Println("-----------------------------")
 			log.Printf("diff: %s\t, seed: %d\t\n", diff, seed)
