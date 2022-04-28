@@ -37,14 +37,21 @@ func _() {
 	_ = x[OpAdd-26]
 	_ = x[OpSub-27]
 	_ = x[OpAnd-28]
-	_ = x[OpOr-29]
-	_ = x[OpTernary-30]
-	_ = x[OpCall-31]
+	_ = x[OpAndWord-29]
+	_ = x[OpOr-30]
+	_ = x[OpOrWord-31]
+	_ = x[OpXor-32]
+	_ = x[OpTernary-33]
+	_ = x[OpCall-34]
+	_ = x[OpPostfixIncrement-35]
+	_ = x[OpPrefixIncrement-36]
+	_ = x[OpPostfixDecrement-37]
+	_ = x[OpPrefixDecrement-38]
 }
 
-const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexConcatAddSubAndOrTernaryCall"
+const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexConcatAddSubAndAndWordOrOrWordXorTernaryCallPostfixIncrementPrefixIncrementPostfixDecrementPrefixDecrement"
 
-var _Op_index = [...]uint8{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 155, 158, 161, 164, 166, 173, 177}
+var _Op_index = [...]uint8{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 155, 158, 161, 164, 171, 173, 179, 182, 189, 193, 209, 224, 240, 255}
 
 func (i Op) String() string {
 	if i < 0 || i >= Op(len(_Op_index)-1) {
