@@ -150,6 +150,9 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpAssign:
 		p.printBinary(n, "=")
 
+	case ir.OpAssignModify:
+		p.printBinary(n, ir.MapOpLit(n.Value.(ir.Op))+"=")
+
 	case ir.OpAdd:
 		p.printBinary(n, "+")
 	case ir.OpSub:

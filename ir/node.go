@@ -99,12 +99,32 @@ const (
 	// $Args[0] '[' $Args[1] ']'
 	OpIndex
 
+	// '-' $Args[0]
+	OpNegation
+
+	// '+' $Args[0]
+	OpUnaryPlus
+
 	// $Args[0] '.' $Args[1]
 	OpConcat
+
 	// $Args[0] '+' $Args[1]
 	OpAdd
+
 	// $Args[0] '-' $Args[1]
 	OpSub
+
+	// $Args[0] '/' $Args[1]
+	OpDiv
+
+	// $Args[0] '*' $Args[1]
+	OpMul
+
+	// $Args[0] '%' $Args[1]
+	OpMod
+
+	// $Args[0] '**' $Args[1]
+	OpExp
 
 	// $Args[0] '&&' $Args[1]
 	OpAnd
@@ -144,6 +164,15 @@ const (
 
 	// $Args[0] '===' $Args[1]
 	OpEqual3
+
+	// $Args[0] '!=' $Args[1]
+	OpNotEqual2
+
+	// $Args[0] '!==' $Args[1]
+	OpNotEqual3
+
+	// $Args[0] '<=>' $Args[1]
+	OpSpaceship
 
 	// $Args[0] '++'
 	OpPostInc
@@ -225,7 +254,7 @@ func NewAssign(lhs, rhs *Node) *Node {
 	return &Node{Op: OpAssign, Args: []*Node{lhs, rhs}}
 }
 
-func NewAssignModify(op Op, rhs, lhs *Node) *Node {
+func NewAssignModify(op Op, lhs, rhs *Node) *Node {
 	return &Node{Op: OpAssignModify, Value: op, Args: []*Node{lhs, rhs}}
 }
 
@@ -346,4 +375,54 @@ func NewOrWord(x, y *Node) *Node {
 
 func NewXorWord(x, y *Node) *Node {
 	return &Node{Op: OpXorWord, Args: []*Node{x, y}}
+}
+
+func NewNotEqual2(x, y *Node) *Node {
+	return &Node{Op: OpNotEqual2, Args: []*Node{x, y}}
+}
+
+func NewNotEqual3(x, y *Node) *Node {
+	return &Node{Op: OpNotEqual3, Args: []*Node{x, y}}
+}
+
+func NewSpaceship(x, y *Node) *Node {
+	return &Node{Op: OpSpaceship, Args: []*Node{x, y}}
+}
+
+func NewMod(x, y *Node) *Node {
+	return &Node{Op: OpMod, Args: []*Node{x, y}}
+}
+
+func NewExp(x, y *Node) *Node {
+	return &Node{Op: OpExp, Args: []*Node{x, y}}
+}
+
+func NewMul(x, y *Node) *Node {
+	return &Node{Op: OpMul, Args: []*Node{x, y}}
+}
+
+func NewDiv(x, y *Node) *Node {
+	return &Node{Op: OpDiv, Args: []*Node{x, y}}
+}
+
+func NewNegation(x *Node) *Node {
+	return &Node{Op: OpNegation, Args: []*Node{x}}
+}
+
+func NewUnaryPlus(x *Node) *Node {
+	return &Node{Op: OpUnaryPlus, Args: []*Node{x}}
+}
+
+var opLit = map[Op]string{
+	OpAdd:    "+",
+	OpConcat: ".",
+	OpSub:    "-",
+	OpDiv:    "/",
+	OpMul:    "*",
+	OpExp:    "**",
+	OpMod:    "%",
+}
+
+func MapOpLit(op Op) string {
+	return opLit[op]
 }
