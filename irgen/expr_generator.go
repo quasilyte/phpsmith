@@ -204,7 +204,7 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 		case ir.ScalarString:
 			return g.stringValue()
 		case ir.ScalarMixed:
-			return g.mixedValue()
+			return g.mixedValue(true)
 		default:
 			panic(fmt.Sprintf("unexpected %s scalar type", typ.Kind))
 		}
@@ -222,9 +222,7 @@ func (g *exprGenerator) chooseExpr(list *exprChoiceList) *ir.Node {
 		return list.fallback()
 	}
 	g.exprDepth++
-	defer func() {
-		g.exprDepth--
-	}()
+	defer func() { g.exprDepth-- }()
 
 	for {
 		probe := g.rand.Intn(len(list.indexMap))
@@ -263,8 +261,12 @@ func (g *exprGenerator) stringValue() *ir.Node {
 	return g.chooseExpr(&g.stringChoices)
 }
 
-func (g *exprGenerator) mixedValue() *ir.Node {
-	switch randutil.IntRange(g.rand, 0, 3) {
+func (g *exprGenerator) mixedValue(permitArray bool) *ir.Node {
+	maxRoll := 4
+	if g.exprDepth >= 10 || !permitArray {
+		maxRoll = 3
+	}
+	switch randutil.IntRange(g.rand, 0, maxRoll) {
 	case 0:
 		return g.boolValue()
 	case 1:
@@ -273,6 +275,8 @@ func (g *exprGenerator) mixedValue() *ir.Node {
 		return g.floatValue()
 	case 3:
 		return g.stringValue()
+	case 4:
+		return g.arrayValue(g.PickScalarType())
 	}
 	panic("unreachable")
 }
@@ -355,6 +359,9 @@ func (g *exprGenerator) floatVar() *ir.Node  { return g.varOfType(ir.FloatType) 
 func (g *exprGenerator) stringVar() *ir.Node { return g.varOfType(ir.StringType) }
 
 func (g *exprGenerator) callOfType(fn *ir.FuncType) *ir.Node {
+	g.exprDepth++
+	defer func() { g.exprDepth-- }()
+
 	numArgs := randutil.IntRange(g.rand, fn.MinArgsNum, len(fn.Params))
 	callArgs := make([]*ir.Node, numArgs)
 	for i := range callArgs {
@@ -365,7 +372,11 @@ func (g *exprGenerator) callOfType(fn *ir.FuncType) *ir.Node {
 		callArgs[i] = arg
 	}
 	funcExpr := ir.NewName(fn.Name)
-	return ir.NewCall(funcExpr, callArgs...)
+	result := ir.NewCall(funcExpr, callArgs...)
+	if fn.NeedCast {
+		result = &ir.Node{Op: ir.OpCast, Args: []*ir.Node{result}, Type: fn.Result}
+	}
+	return result
 }
 
 func (g *exprGenerator) boolCall() *ir.Node {
@@ -396,7 +407,7 @@ func (g *exprGenerator) intNegation() *ir.Node {
 }
 
 func (g *exprGenerator) castToType(typ ir.Type) *ir.Node {
-	arg := g.maybeAddParens(g.mixedValue())
+	arg := g.maybeAddParens(g.mixedValue(false))
 	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: typ}
 }
 
@@ -404,7 +415,14 @@ func (g *exprGenerator) intCast() *ir.Node    { return g.castToType(ir.IntType) 
 func (g *exprGenerator) stringCast() *ir.Node { return g.castToType(ir.StringType) }
 
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
-	numElems := randutil.IntRange(g.rand, 1, 4)
+	g.exprDepth++
+	defer func() { g.exprDepth-- }()
+
+	maxNumElems := 4
+	if g.exprDepth >= 10 {
+		maxNumElems = 2
+	}
+	numElems := randutil.IntRange(g.rand, 1, maxNumElems)
 	elems := make([]*ir.Node, numElems)
 	for i := 0; i < numElems; i++ {
 		elems[i] = g.GenerateValueOfType(elemType)
@@ -421,6 +439,8 @@ var intLitValues = []*ir.Node{
 	ir.NewIntLit(0),
 	ir.NewIntLit(-1),
 	ir.NewIntLit(0xff),
+	ir.NewIntLit(9284128),
+	ir.NewIntLit(-9284120),
 	ir.NewIntLit(-0xff),
 }
 
@@ -428,6 +448,10 @@ var floatLitValues = []*ir.Node{
 	ir.NewFloatLit(0),
 	ir.NewFloatLit(-1),
 	ir.NewFloatLit(2.51),
+	ir.NewFloatLit(329.5),
+	ir.NewFloatLit(0.00043),
+	ir.NewFloatLit(21948.293242),
+	ir.NewFloatLit(-2222.9999),
 	ir.NewFloatLit(2842.6378),
 }
 
@@ -442,6 +466,12 @@ var stringLitValues = []*ir.Node{
 	ir.NewStringLit("\x00"),
 	ir.NewStringLit("simple string"),
 	ir.NewStringLit("1\n2"),
+	ir.NewStringLit("<div/>"),
+	ir.NewStringLit("<h1>ok</h1>"),
+	ir.NewStringLit("<p>"),
+	ir.NewStringLit("</p>"),
+	ir.NewStringLit(`{"key":1}`),
+	ir.NewStringLit(`["val"]`),
 }
 
 var scalarTypes = []ir.Type{
