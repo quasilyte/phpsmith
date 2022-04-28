@@ -1,5 +1,5 @@
 NOW=`date '+%Y.%m.%d %H:%M:%S'`
-OS=`uname -i -v`
+OS=`uname`
 AFTER_COMMIT=`git rev-parse HEAD`
 VERSION=0.3.0
 

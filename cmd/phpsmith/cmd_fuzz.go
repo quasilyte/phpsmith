@@ -38,10 +38,10 @@ func cmdFuzz(args []string) error {
 	seed := *flagSeed
 
 	if concurrency == 1 && runtime.NumCPU()/2 > 1 {
-		flagConcurrency = ptrOfInt(runtime.NumCPU() / 2)
+		concurrency = runtime.NumCPU() / 2
 	}
 
-	interrupt := make(chan os.Signal)
+	interrupt := make(chan os.Signal, 1)
 	signalNotify(interrupt)
 
 	eg, ctx := errgroup.WithContext(context.Background())
@@ -66,7 +66,7 @@ out:
 			return err
 		}
 
-		for i := 0; i < *flagConcurrency; i++ {
+		for i := 0; i < concurrency; i++ {
 			eg.Go(func() error {
 				return runner(ctx, filesCh, seed)
 			})
@@ -89,13 +89,16 @@ out:
 }
 
 func runner(ctx context.Context, files <-chan string, seed int64) error {
-	for filename := range files {
-		if err := fuzzingProcess(ctx, filename, seed); err != nil {
-			return err
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case filename := <-files:
+			if err := fuzzingProcess(ctx, filename, seed); err != nil {
+				return err
+			}
 		}
 	}
-
-	return nil
 }
 
 func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
@@ -133,8 +136,4 @@ func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
 
 func signalNotify(interrupt chan<- os.Signal) {
 	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
-}
-
-func ptrOfInt(i int) *int {
-	return &i
 }
