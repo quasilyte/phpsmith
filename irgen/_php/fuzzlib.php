@@ -1,5 +1,9 @@
 <?php
 
+function dump_with_pos($file, $line, $v) {
+    var_dump(["$file:$line" => $v]);
+}
+
 /**
  * @param mixed $x
  * @param mixed $y
@@ -38,7 +42,10 @@ function float_neq3($x, $y) {
  */
 function _safe_div($x, $y) {
     if ($y > 0 || $y < 0) {
-        return $x / $y;
+        try {
+            return $x / $y;
+        } catch (\Throwable $e) {
+        }
     }
     echo "invalid argument in /\n";
     return 0;
@@ -50,7 +57,10 @@ function _safe_div($x, $y) {
  */
 function _safe_mod($x, $y) {
     if ($y > 0 || $y < 0) {
-        return $x % $y;
+        try {
+            return $x % $y;
+        } catch (\Throwable $e) {
+        }
     }
     echo "invalid argument in %\n";
     return 0;
