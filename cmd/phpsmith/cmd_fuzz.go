@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"log"
@@ -18,7 +19,7 @@ import (
 	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator"
 )
 
-type executor func(ctx context.Context, filename string) ([]byte, error)
+type executor func(ctx context.Context, filename string, seed int64) ([]byte, error)
 
 var executors = []executor{
 	interpretator.RunPHP,
@@ -110,14 +111,15 @@ type ExecutorOutput struct {
 
 func fuzzingProcess(ctx context.Context, dir string, seed int64) error {
 	var results = make(map[int]ExecutorOutput, len(executors))
-	var errMsg string
 	for i, ex := range executors {
-		r, err := ex(ctx, dir)
+		var errMsg string
+		r, err := ex(ctx, dir, seed)
 
 		if err != nil {
 			errMsg = err.Error()
 		}
 
+		grepExceptions(r, seed)
 		results[i] = ExecutorOutput{
 			Output: string(r),
 			Error:  errMsg,
@@ -146,4 +148,17 @@ func fuzzingProcess(ctx context.Context, dir string, seed int64) error {
 
 func signalNotify(interrupt chan<- os.Signal) {
 	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
+}
+
+var exceptionPatterns = [][]byte{
+	[]byte("thrown exception"),
+	[]byte("fatal error"),
+}
+
+func grepExceptions(s []byte, seed int64) {
+	for _, pattern := range exceptionPatterns {
+		if bytes.Contains(bytes.ToLower(s), pattern) {
+			log.Println("found exception pattern: on seed:", seed)
+		}
+	}
 }

@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"os/exec"
 )
 
-func RunPHP(ctx context.Context, dir string) ([]byte, error) {
+func RunPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
 	var (
 		outBuffer bytes.Buffer
 		errBuffer bytes.Buffer
@@ -16,6 +17,9 @@ func RunPHP(ctx context.Context, dir string) ([]byte, error) {
 	phpCmd.Stdout, phpCmd.Stderr = &outBuffer, &errBuffer
 
 	if err := phpCmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() > 1 {
+			log.Printf("non one or zero exit code found: %d, seed: %d \n", exitErr.ExitCode(), seed)
+		}
 		return nil, fmt.Errorf("on run php: stdOut: %s, stdErr: %s", outBuffer.String(), errBuffer.String())
 	}
 
