@@ -36,6 +36,12 @@ func cmdGenerate(args []string) error {
 	printerConfig := &irprint.Config{
 		Rand: random,
 	}
+	for _, f := range program.RuntimeFiles {
+		fullname := filepath.Join(*flagOutputDir, f.Name)
+		if err := os.WriteFile(fullname, f.Contents, 0o664); err != nil {
+			return fmt.Errorf("create %s file: %w", fullname, err)
+		}
+	}
 	for _, f := range program.Files {
 		fullname := filepath.Join(*flagOutputDir, f.Name)
 		fileContents := makeFileContents(f, printerConfig)

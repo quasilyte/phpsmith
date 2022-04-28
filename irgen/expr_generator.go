@@ -86,6 +86,13 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		}
 	}
 
+	withCast := func(generator func() *ir.Node, typ ir.Type) func() *ir.Node {
+		return func() *ir.Node {
+			arg := g.maybeAddParens(generator())
+			return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: typ}
+		}
+	}
+
 	g.condChoices = makeChoicesList(g.boolLit, []exprChoice{
 		{freq: 3, generate: cmpOpGenerator(ir.OpEqual2)},
 		{freq: 3, generate: cmpOpGenerator(ir.OpEqual3)},
@@ -111,10 +118,12 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.intValue)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpMul, g.intValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpExp, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitAnd, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitOr, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitXor, g.intValue)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpExp, g.intValue), ir.IntType)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpDiv, g.intValue), ir.IntType)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMod, g.intValue), ir.IntType)},
 		{freq: 2, generate: g.intNegation},
 		{freq: 2, generate: g.intCast},
 		{freq: 4, generate: g.intCall},
@@ -358,15 +367,13 @@ func (g *exprGenerator) intNegation() *ir.Node {
 	return ir.NewNegation(g.maybeAddParens(g.intValue()))
 }
 
-func (g *exprGenerator) intCast() *ir.Node {
+func (g *exprGenerator) castToType(typ ir.Type) *ir.Node {
 	arg := g.maybeAddParens(g.mixedValue())
-	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: ir.IntType}
+	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: typ}
 }
 
-func (g *exprGenerator) stringCast() *ir.Node {
-	arg := g.maybeAddParens(g.mixedValue())
-	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: ir.StringType}
-}
+func (g *exprGenerator) intCast() *ir.Node    { return g.castToType(ir.IntType) }
+func (g *exprGenerator) stringCast() *ir.Node { return g.castToType(ir.StringType) }
 
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 	numElems := randutil.IntRange(g.rand, 1, 4)
