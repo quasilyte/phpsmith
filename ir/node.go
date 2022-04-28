@@ -119,7 +119,7 @@ const (
 	OpOrWord
 
 	// $Args[0] 'xor' $Args[1]
-	OpXor
+	OpXorWord
 
 	// $Args[0] '?' $Args[1] ':' $Args[2]
 	OpTernary
@@ -128,16 +128,16 @@ const (
 	OpCall
 
 	// $Args[0] '++'
-	OpPostfixIncrement
+	OpPostInc
 
 	// '++' $Args[0]
-	OpPrefixIncrement
+	OpPreInc
 
 	// $Args[0] '--'
-	OpPostfixDecrement
+	OpPostDec
 
 	// '--' $Args[0]
-	OpPrefixDecrement
+	OpPreDec
 )
 
 var statementOpsMap = [...]bool{
@@ -275,30 +275,30 @@ func NewCall(fn *Node, args ...*Node) *Node {
 	return &Node{Op: OpCall, Args: allArgs}
 }
 
-func NewPostfixIncrement(x *Node) *Node {
-	return &Node{Op: OpPostfixIncrement, Args: []*Node{x}}
+func NewPostInc(x *Node) *Node {
+	return &Node{Op: OpPostInc, Args: []*Node{x}}
 }
 
-func NewPostfixDecrement(x *Node) *Node {
-	return &Node{Op: OpPostfixDecrement, Args: []*Node{x}}
+func NewPostDec(x *Node) *Node {
+	return &Node{Op: OpPostDec, Args: []*Node{x}}
 }
 
-func NewPrefixIncrement(x *Node) *Node {
-	return &Node{Op: OpPrefixIncrement, Args: []*Node{x}}
+func NewPreInc(x *Node) *Node {
+	return &Node{Op: OpPreInc, Args: []*Node{x}}
 }
 
-func NewPrefixDecrement(x *Node) *Node {
-	return &Node{Op: OpPrefixDecrement, Args: []*Node{x}}
+func NewPreDec(x *Node) *Node {
+	return &Node{Op: OpPreDec, Args: []*Node{x}}
 }
 
-func NewOpAndWord(x, y *Node) *Node {
+func NewAndWord(x, y *Node) *Node {
 	return &Node{Op: OpAndWord, Args: []*Node{x, y}}
 }
 
-func NewOpOrWord(x, y *Node) *Node {
+func NewOrWord(x, y *Node) *Node {
 	return &Node{Op: OpOrWord, Args: []*Node{x, y}}
 }
 
-func NewOpXor(x, y *Node) *Node {
-	return &Node{Op: OpXor, Args: []*Node{x, y}}
+func NewXorWord(x, y *Node) *Node {
+	return &Node{Op: OpXorWord, Args: []*Node{x, y}}
 }
