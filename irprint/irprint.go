@@ -82,6 +82,7 @@ func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
 	p.w.WriteByte('\n')
 }
 
+//nolint:gocyclo
 func (p *printer) printNode(n *ir.Node) {
 	switch n.Op {
 	case ir.OpBlock:
@@ -134,10 +135,34 @@ func (p *printer) printNode(n *ir.Node) {
 	case ir.OpConcat:
 		p.printBinary(n, ".")
 
+	case ir.OpAndWord:
+		p.printBinary(n, "and")
 	case ir.OpAnd:
 		p.printBinary(n, "&&")
+	case ir.OpXorWord:
+		p.printBinary(n, "xor")
+	case ir.OpOrWord:
+		p.printBinary(n, "or")
 	case ir.OpOr:
 		p.printBinary(n, "||")
+
+	case ir.OpEqual:
+		p.printBinary(n, "==")
+	case ir.OpEqualStrict:
+		p.printBinary(n, "===")
+	case ir.OpLess:
+		p.printBinary(n, "<")
+	case ir.OpLessOrEqual:
+		p.printBinary(n, "<=")
+	case ir.OpGreater:
+		p.printBinary(n, ">")
+	case ir.OpGreaterOrEqual:
+		p.printBinary(n, ">=")
+
+	case ir.OpPostInc, ir.OpPreInc:
+		p.printBinary(n, "++")
+	case ir.OpPostDec, ir.OpPreDec:
+		p.printBinary(n, "--")
 
 	case ir.OpNot:
 		p.printUnaryPrefix(n, "!")
