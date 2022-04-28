@@ -33,6 +33,11 @@ func (s *scope) PushVar(name string, typ ir.Type) {
 	s.depths[len(s.depths)-1]++
 }
 
+func (s *scope) CurrentBlockVars() []scopeVar {
+	depth := s.depths[len(s.depths)-1]
+	return s.vars[len(s.vars)-depth:]
+}
+
 func (s *scope) FindVarOfType(typ ir.Type) *scopeVar {
 	return s.FindVar(func(v *scopeVar) bool {
 		return typesIdentical(typ, v.typ)
