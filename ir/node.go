@@ -385,7 +385,7 @@ func NewNotEqual3(x, y *Node) *Node {
 	return &Node{Op: OpNotEqual3, Args: []*Node{x, y}}
 }
 
-func NewSpaceShip(x, y *Node) *Node {
+func NewSpaceship(x, y *Node) *Node {
 	return &Node{Op: OpSpaceship, Args: []*Node{x, y}}
 }
 
