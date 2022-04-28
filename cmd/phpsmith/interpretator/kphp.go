@@ -18,15 +18,22 @@ func RunKPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
 	)
 
 	binaryName := dir + "/" + dir
-	mu.Lock()
-	defer mu.Unlock()
-	compileCmd := exec.CommandContext(ctx, "kphp", "--mode", "cli", "-o", binaryName, dir+"/main.php")
-	compileCmd.Stdout, compileCmd.Stderr = &outBuffer, &errBuffer
 
-	if err := compileCmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() > 1 {
-			log.Printf("non one or zero exit code found: %d, seed: %d \n", exitErr.ExitCode(), seed)
+	if err := func() error {
+		mu.Lock()
+		defer mu.Unlock()
+
+		compileCmd := exec.CommandContext(ctx, "kphp", "--mode", "cli", "-o", binaryName, dir+"/main.php")
+		compileCmd.Stdout, compileCmd.Stderr = &outBuffer, &errBuffer
+
+		if err := compileCmd.Run(); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() > 1 {
+				log.Printf("non one or zero exit code found: %d, seed: %d \n", exitErr.ExitCode(), seed)
+			}
+			return err
 		}
+		return nil
+	}(); err != nil {
 		return nil, fmt.Errorf("on compile kphp: stdOut: %s, stdErr: %s", outBuffer.String(), errBuffer.String())
 	}
 
