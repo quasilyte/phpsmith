@@ -242,7 +242,7 @@ func (g *generator) pushStatement() {
 		g.stmtDepth--
 	}()
 
-	switch randutil.IntRange(g.rand, 0, 9+(g.stmtDepth*2)) {
+	switch randutil.IntRange(g.rand, 0, 10+(g.stmtDepth*2)) {
 	case 0:
 		if g.insideLoop {
 			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewBreak(0))
@@ -255,13 +255,13 @@ func (g *generator) pushStatement() {
 		} else {
 			g.pushIfStmt()
 		}
-	case 2:
+	case 2, 3, 4:
 		g.pushVarDump()
-	case 3, 4:
+	case 5, 6:
 		g.pushAssignStmt()
-	case 5:
+	case 7:
 		g.pushLoopStmt()
-	case 6:
+	case 8:
 		g.pushSwitchStmt()
 	default:
 		g.pushVarDecl(g.genVarname())

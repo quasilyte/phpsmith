@@ -162,6 +162,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 5, generate: g.stringCall},
 		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, g.stringValue)},
 		{freq: 5, generate: g.stringLit},
+		{freq: 5, generate: g.interpolatedString},
 		{freq: 6, generate: g.stringVar, fallback: g.stringLit},
 	})
 
@@ -328,6 +329,29 @@ func (g *exprGenerator) floatLit() *ir.Node {
 	default:
 		return floatLitValues[g.rand.Intn(len(floatLitValues))]
 	}
+}
+
+func (g *exprGenerator) interpolatedString() *ir.Node {
+	numParts := randutil.IntRange(g.rand, 3, 8)
+	n := &ir.Node{
+		Op:   ir.OpInterpolatedString,
+		Args: make([]*ir.Node, 0, numParts),
+	}
+	for i := 0; i < numParts; i++ {
+		var part *ir.Node
+		if randutil.Bool(g.rand) {
+			v := g.varOfType(g.PickScalarType())
+			if v != nil {
+				part = v
+			} else {
+				part = g.stringLit()
+			}
+		} else {
+			part = g.stringLit()
+		}
+		n.Args = append(n.Args, part)
+	}
+	return n
 }
 
 func (g *exprGenerator) stringLit() *ir.Node {
