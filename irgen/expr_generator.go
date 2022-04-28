@@ -3,6 +3,7 @@ package irgen
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"unicode"
 
 	"github.com/quasilyte/phpsmith/ir"
@@ -259,21 +260,18 @@ func (g *exprGenerator) floatLit() *ir.Node {
 }
 
 func (g *exprGenerator) stringLit() *ir.Node {
-	var s string
-	count := g.rand.Intn(10)
-	if count == 0 {
-		count = 10
-	}
+	var s strings.Builder
+	count := randutil.IntRange(g.rand, 1, 6)
 	for i := 0; i < count; i++ {
-		switch codePoint := g.rand.Intn(unicode.MaxASCII); codePoint {
-		case 0:
-			s += stringLitValues[g.rand.Intn(len(stringLitValues))].Value.(string)
-		default:
-			s += string([]rune{rune(codePoint)})
+		ch := g.rand.Intn(unicode.MaxASCII)
+		if !unicode.IsPrint(rune(ch)) {
+			s.WriteString(stringLitValues[g.rand.Intn(len(stringLitValues))].Value.(string))
+		} else {
+			s.WriteByte(byte(ch))
 		}
 	}
 
-	return ir.NewStringLit(s)
+	return ir.NewStringLit(s.String())
 }
 
 func (g *exprGenerator) varOfType(typ ir.Type) *ir.Node {
