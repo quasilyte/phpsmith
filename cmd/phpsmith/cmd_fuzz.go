@@ -53,6 +53,12 @@ func cmdFuzz(args []string) error {
 	}()
 
 	filesCh := make(chan string, 100)
+	for i := 0; i < concurrency; i++ {
+		eg.Go(func() error {
+			return runner(ctx, filesCh, seed)
+		})
+	}
+
 out:
 	for {
 		select {
@@ -64,12 +70,6 @@ out:
 		files, err := generate(dir, seed)
 		if err != nil {
 			return err
-		}
-
-		for i := 0; i < concurrency; i++ {
-			eg.Go(func() error {
-				return runner(ctx, filesCh, seed)
-			})
 		}
 
 		for _, file := range files {
@@ -95,21 +95,31 @@ func runner(ctx context.Context, files <-chan string, seed int64) error {
 			return nil
 		case filename := <-files:
 			if err := fuzzingProcess(ctx, filename, seed); err != nil {
-				return err
+				log.Println("on fuzzingProcess:", err)
 			}
 		}
 	}
 }
 
-func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
-	results := make([][]byte, 0, len(executors))
-	errs := make([]error, 0, len(executors))
+type ExecutorOutput struct {
+	Output string
+	Error  string
+}
 
-	for _, ex := range executors {
+func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
+	var results = make(map[int]ExecutorOutput, len(executors))
+	var errMsg string
+	for i, ex := range executors {
 		r, err := ex(ctx, filename)
 
-		results = append(results, r)
-		errs = append(errs, err)
+		if err != nil {
+			errMsg = err.Error()
+		}
+
+		results[i] = ExecutorOutput{
+			Output: string(r),
+			Error:  errMsg,
+		}
 	}
 
 	checkedStack := make(map[int][]int)
@@ -124,9 +134,11 @@ func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
 				}
 			}
 
-			if diff := cmp.Diff(r, rr); diff != "" {
+			if diff := cmp.Diff(r.Output, rr.Output); diff != "" {
 				checkedStack[i] = append(checkedStack[i], ii)
-				log.Printf("out: %s\tseed: %d\tdiff: %s\tstdErr: %s\t\n", string(r), seed, diff, errs)
+				log.Println("-----------------------------")
+				log.Printf("out: %s\tseed: %d\tdiff: %s\tstdErr: %s\t \n", r.Output, seed, diff, r.Error)
+				log.Printf("out: %s\tseed: %d\tdiff: %s\tstdErr: %s\t \n", rr.Output, seed, diff, rr.Error)
 			}
 		}
 	}
