@@ -34,6 +34,7 @@ var modifyOpLit = map[ir.Op]string{
 	ir.OpBitNot:        "~",
 	ir.OpBitShiftLeft:  "<<",
 	ir.OpBitShiftRight: ">>",
+	ir.OpNullCoalesce:  "??",
 }
 
 func FprintRootNode(w io.Writer, n ir.RootNode, config *Config) {
@@ -176,6 +177,38 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpConcat:
 		p.printBinary(n, ".")
 
+	case ir.OpNullCoalesce:
+		p.printBinary(n, "??")
+	case ir.OpBitShiftRight:
+		p.printBinary(n, ">>")
+	case ir.OpBitShiftLeft:
+		p.printBinary(n, "<<")
+	case ir.OpBitNot:
+		p.printUnaryPrefix(n, "~")
+	case ir.OpBitXor:
+		p.printBinary(n, "^")
+	case ir.OpBitOr:
+		p.printBinary(n, "|")
+	case ir.OpBitAnd:
+		p.printBinary(n, "&")
+	case ir.OpNegation:
+		p.printUnaryPrefix(n, "-")
+	case ir.OpUnaryPlus:
+		p.printUnaryPrefix(n, "+")
+	case ir.OpDiv:
+		p.printBinary(n, "/")
+	case ir.OpExp:
+		p.printBinary(n, "%")
+	case ir.OpMod:
+		p.printBinary(n, "%")
+	case ir.OpMul:
+		p.printBinary(n, "*")
+	case ir.OpNotEqual2:
+		p.printBinary(n, "!=")
+	case ir.OpNotEqual3:
+		p.printBinary(n, "!==")
+	case ir.OpSpaceship:
+		p.printBinary(n, "<=>")
 	case ir.OpAndWord:
 		p.printBinary(n, "and")
 	case ir.OpAnd:
