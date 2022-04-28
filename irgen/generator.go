@@ -1,8 +1,10 @@
 package irgen
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/quasilyte/phpsmith/ir"
 	"github.com/quasilyte/phpsmith/phpdoc"
@@ -29,25 +31,10 @@ type generator struct {
 
 func newGenerator(config *Config) *generator {
 	symtab := newSymbolTable()
-	phpfunc.Add(symtab.funcs)
-	for _, fn := range symtab.funcs {
-		switch resultType := fn.Result.(type) {
-		case *ir.ScalarType:
-			switch resultType.Kind {
-			case ir.ScalarVoid:
-				symtab.voidFuncs = append(symtab.voidFuncs, fn)
-			case ir.ScalarBool:
-				symtab.boolFuncs = append(symtab.boolFuncs, fn)
-			case ir.ScalarInt:
-				symtab.intFuncs = append(symtab.intFuncs, fn)
-			case ir.ScalarFloat:
-				symtab.floatFuncs = append(symtab.floatFuncs, fn)
-			case ir.ScalarString:
-				symtab.stringFuncs = append(symtab.stringFuncs, fn)
-			}
-
-		case *ir.ArrayType:
-			symtab.arrayFuncs = append(symtab.arrayFuncs, fn)
+	{
+		coreFuncs := phpfunc.GetList()
+		for _, fn := range coreFuncs {
+			symtab.AddFunc(fn)
 		}
 	}
 
@@ -62,16 +49,46 @@ func newGenerator(config *Config) *generator {
 }
 
 func (g *generator) CreateProgram() *Program {
-	g.files = append(g.files, g.createMainFile())
+	var mainFileRequires []*ir.RootRequire
+	numLibs := randutil.IntRange(g.rand, 1, 3)
+	for i := 0; i < numLibs; i++ {
+		filename := fmt.Sprintf("lib%d.php", i)
+		g.files = append(g.files, g.createLibFile(filename))
+		mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: filename})
+	}
+	mainFile := g.createMainFile(mainFileRequires)
+	g.files = append(g.files, mainFile)
 	return &Program{Files: g.files}
 }
 
-func (g *generator) createMainFile() *File {
-	f := &File{Name: "main.php"}
+func (g *generator) createLibFile(filename string) *File {
+	file := &File{Name: filename}
+
+	funcPrefix := strings.TrimSuffix(filename, ".php")
+
+	numLibFuncs := randutil.IntRange(g.rand, 2, 4)
+	for i := 0; i < numLibFuncs; i++ {
+		funcName := fmt.Sprintf("%s_func%d", funcPrefix, i)
+		fn := g.createFunc(funcName, true)
+		file.Nodes = append(file.Nodes, fn)
+		g.symtab.AddFunc(fn.Type)
+	}
+
+	return file
+}
+
+func (g *generator) createMainFile(requires []*ir.RootRequire) *File {
+	file := &File{
+		Name: "main.php",
+	}
+
+	for _, r := range requires {
+		file.Nodes = append(file.Nodes, r)
+	}
 
 	funcs := make([]*ir.RootFuncDecl, randutil.IntRange(g.rand, 2, 4))
 	for i := range funcs {
-		funcs[i] = g.createFunc("func" + strconv.Itoa(i))
+		funcs[i] = g.createFunc("func"+strconv.Itoa(i), false)
 	}
 
 	// Create a main func.
@@ -89,27 +106,50 @@ func (g *generator) createMainFile() *File {
 	}
 
 	for _, fn := range funcs {
-		f.Nodes = append(f.Nodes, fn)
+		file.Nodes = append(file.Nodes, fn)
 	}
-	f.Nodes = append(f.Nodes, mainFunc)
+	file.Nodes = append(file.Nodes, mainFunc)
 
-	f.Nodes = append(f.Nodes, &ir.RootStmt{
+	file.Nodes = append(file.Nodes, &ir.RootStmt{
 		X: ir.NewCall(ir.NewName("main")),
 	})
 
-	return f
+	return file
 }
 
-func (g *generator) createFunc(name string) *ir.RootFuncDecl {
+func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 	fn := &ir.RootFuncDecl{
 		Body: ir.NewBlock(),
-		Type: &ir.FuncType{
-			Name:   name,
-			Result: ir.VoidType,
-		},
 	}
 
+	if isLibFunc {
+		fn.Type = &ir.FuncType{
+			Result: g.expr.PickType(),
+		}
+		numParams := randutil.IntRange(g.rand, 0, 10)
+		for i := 0; i < numParams; i++ {
+			paramName := fmt.Sprintf("p%d", i)
+			param := ir.TypeField{Name: paramName, Type: g.expr.PickType()}
+			fn.Tags = append(fn.Tags, &phpdoc.ParamTag{
+				VarName: "$" + paramName,
+				Type:    param.Type.String(),
+			})
+			fn.Type.Params = append(fn.Type.Params, param)
+		}
+		fn.Type.MinArgsNum = len(fn.Type.Params)
+		fn.Tags = append(fn.Tags, &phpdoc.ReturnTag{Type: fn.Type.Result.String()})
+	} else {
+		fn.Type = &ir.FuncType{
+			Name:   name,
+			Result: ir.VoidType,
+		}
+	}
+	fn.Type.Name = name
+
 	g.scope.Enter()
+	for _, param := range fn.Type.Params {
+		g.scope.PushVar(param.Name, param.Type)
+	}
 	defer func() {
 		g.scope.Leave()
 		if len(g.scope.depths) != 0 {
@@ -120,19 +160,36 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 	g.varNameSeq = 0
 	g.currentBlock = fn.Body
 
-	blockVars := make([]string, randutil.IntRange(g.rand, 3, 7))
+	numBlockVars := 0
+	if isLibFunc {
+		numBlockVars = randutil.IntRange(g.rand, 0, 2)
+	} else {
+		numBlockVars = randutil.IntRange(g.rand, 3, 7)
+	}
+	blockVars := make([]string, numBlockVars)
 	for i := range blockVars {
 		blockVars[i] = g.genVarname()
 		g.pushVarDecl(blockVars[i])
 	}
-	numStatements := randutil.IntRange(g.rand, 3, 10)
+	numStatements := 0
+	if isLibFunc {
+		numStatements = randutil.IntRange(g.rand, 1, 3)
+	} else {
+		numStatements = randutil.IntRange(g.rand, 3, 10)
+	}
 	for i := 0; i < numStatements; i++ {
 		g.pushStatement()
 	}
-	for _, name := range blockVars {
-		v := g.scope.FindVarByName(name)
-		varDump := ir.NewCall(ir.NewName("var_dump"), ir.NewVar(name, v.typ))
-		g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+
+	if isLibFunc {
+		ret := ir.NewReturn(g.expr.GenerateValueOfType(fn.Type.Result))
+		g.currentBlock.Args = append(g.currentBlock.Args, ret)
+	} else {
+		for _, name := range blockVars {
+			v := g.scope.FindVarByName(name)
+			varDump := ir.NewCall(ir.NewName("var_dump"), ir.NewVar(name, v.typ))
+			g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+		}
 	}
 
 	return fn

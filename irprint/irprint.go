@@ -87,6 +87,8 @@ func (p *printer) printRootNode(n ir.RootNode) {
 	switch n := n.(type) {
 	case *ir.RootFuncDecl:
 		p.printFuncDecl(n)
+	case *ir.RootRequire:
+		p.w.WriteString("require_once __DIR__ . '/" + n.Path + "';\n")
 	case *ir.RootStmt:
 		flags := p.printNode(n.X)
 		if flags.NeedSemicolon() {
@@ -102,7 +104,7 @@ func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
 	if len(decl.Tags) != 0 {
 		p.w.WriteString("/**\n")
 		for _, tag := range decl.Tags {
-			fmt.Fprintf(p.w, " * %s %s\n", tag.Name(), tag.Value())
+			fmt.Fprintf(p.w, " * @%s %s\n", tag.Name(), tag.Value())
 		}
 		p.w.WriteString(" */\n")
 	}
