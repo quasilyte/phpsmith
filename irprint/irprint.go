@@ -196,6 +196,12 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		}
 		p.w.WriteByte('"')
 
+	case ir.OpIndex:
+		p.printNode(n.Args[0])
+		p.w.WriteByte('[')
+		p.printNode(n.Args[1])
+		p.w.WriteByte(']')
+
 	case ir.OpVar:
 		p.w.WriteString("$" + n.Value.(string))
 	case ir.OpName:

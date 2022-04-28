@@ -653,13 +653,13 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.StringType,
 	},
-	{
-		Name: "is_object",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "is_object",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	{
 		Name: "checkdate",
 		Params: []ir.TypeField{
@@ -746,13 +746,13 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.BoolType,
 	},
-	{
-		Name: "is_bool",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "is_bool",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	{
 		Name: "gettype",
 		Params: []ir.TypeField{
