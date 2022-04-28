@@ -297,9 +297,9 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 
 	case ir.OpArrayLit:
 		if len(n.Args) == 0 {
-			p.w.WriteString("[]")
+			p.w.WriteString("array()")
 		} else {
-			p.w.WriteString("[\n")
+			p.w.WriteString("array(\n")
 			p.depth += 2
 			for _, elem := range n.Args {
 				p.indent()
@@ -308,7 +308,7 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 			}
 			p.depth -= 2
 			p.indent()
-			p.w.WriteString("]")
+			p.w.WriteString(")")
 		}
 
 	case ir.OpCall:

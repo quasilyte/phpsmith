@@ -75,6 +75,7 @@ type FuncType struct {
 	Params     []TypeField
 	MinArgsNum int
 	Result     Type
+	NeedCast   bool
 }
 
 func (typ *ScalarType) String() string {
