@@ -127,6 +127,24 @@ const (
 	// $Args[0] '(' $Args[1:]... ')'
 	OpCall
 
+	// $Args[0] '<' $Args[1]
+	OpLess
+
+	// $Args[0] '<=' $Args[1]
+	OpLessOrEqual
+
+	// $Args[0] '>' $Args[1]
+	OpGreater
+
+	// $Args[0] '>=' $Args[1]
+	OpGreaterOrEqual
+
+	// $Args[0] '==' $Args[1]
+	OpEqual2
+
+	// $Args[0] '===' $Args[1]
+	OpEqual3
+
 	// $Args[0] '++'
 	OpPostInc
 
@@ -273,6 +291,30 @@ func NewCall(fn *Node, args ...*Node) *Node {
 	allArgs[0] = fn
 	copy(allArgs[1:], args)
 	return &Node{Op: OpCall, Args: allArgs}
+}
+
+func NewLess(x, y *Node) *Node {
+	return &Node{Op: OpLess, Args: []*Node{x, y}}
+}
+
+func NewLessOrEqual(x, y *Node) *Node {
+	return &Node{Op: OpLessOrEqual, Args: []*Node{x, y}}
+}
+
+func NewGreater(x, y *Node) *Node {
+	return &Node{Op: OpGreater, Args: []*Node{x, y}}
+}
+
+func NewGreaterOrEqual(x, y *Node) *Node {
+	return &Node{Op: OpGreaterOrEqual, Args: []*Node{x, y}}
+}
+
+func NewEqual2(x, y *Node) *Node {
+	return &Node{Op: OpEqual2, Args: []*Node{x, y}}
+}
+
+func NewEqual3(x, y *Node) *Node {
+	return &Node{Op: OpEqual3, Args: []*Node{x, y}}
 }
 
 func NewPostInc(x *Node) *Node {

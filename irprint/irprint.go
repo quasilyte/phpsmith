@@ -82,6 +82,7 @@ func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
 	p.w.WriteByte('\n')
 }
 
+//nolint:gocyclo
 func (p *printer) printNode(n *ir.Node) {
 	switch n.Op {
 	case ir.OpBlock:
@@ -134,10 +135,39 @@ func (p *printer) printNode(n *ir.Node) {
 	case ir.OpConcat:
 		p.printBinary(n, ".")
 
+	case ir.OpAndWord:
+		p.printBinary(n, "and")
 	case ir.OpAnd:
 		p.printBinary(n, "&&")
+	case ir.OpXorWord:
+		p.printBinary(n, "xor")
+	case ir.OpOrWord:
+		p.printBinary(n, "or")
 	case ir.OpOr:
 		p.printBinary(n, "||")
+
+	case ir.OpEqual2:
+		p.printBinary(n, "==")
+	case ir.OpEqual3:
+		p.printBinary(n, "===")
+	case ir.OpLess:
+		p.printBinary(n, "<")
+	case ir.OpLessOrEqual:
+		p.printBinary(n, "<=")
+	case ir.OpGreater:
+		p.printBinary(n, ">")
+	case ir.OpGreaterOrEqual:
+		p.printBinary(n, ">=")
+
+	case ir.OpPreInc:
+		p.printUnaryPrefix(n, "++")
+	case ir.OpPreDec:
+		p.printUnaryPrefix(n, "--")
+
+	case ir.OpPostInc:
+		p.printUnaryPostfix(n, "++")
+	case ir.OpPostDec:
+		p.printUnaryPostfix(n, "--")
 
 	case ir.OpNot:
 		p.printUnaryPrefix(n, "!")
@@ -186,6 +216,11 @@ func (p *printer) printNode(n *ir.Node) {
 func (p *printer) printUnaryPrefix(n *ir.Node, op string) {
 	p.w.WriteString(op)
 	p.printNode(n.Args[0])
+}
+
+func (p *printer) printUnaryPostfix(n *ir.Node, op string) {
+	p.printNode(n.Args[0])
+	p.w.WriteString(op)
 }
 
 func (p *printer) printBinary(n *ir.Node, op string) {
