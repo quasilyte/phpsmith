@@ -138,6 +138,24 @@ const (
 
 	// '--' $Args[0]
 	OpPrefixDecrement
+
+	// $Args[0] '<' $Args[1]
+	OpLess
+
+	// $Args[0] '<=' $Args[1]
+	OpLessOrEqual
+
+	// $Args[0] '>' $Args[1]
+	OpGreater
+
+	// $Args[0] '>=' $Args[1]
+	OpGreaterOrEqual
+
+	// $Args[0] '==' $Args[1]
+	OpEqual
+
+	// $Args[0] '===' $Args[1]
+	OpEqualStrict
 )
 
 var statementOpsMap = [...]bool{
@@ -301,4 +319,28 @@ func NewOpOrWord(x, y *Node) *Node {
 
 func NewOpXor(x, y *Node) *Node {
 	return &Node{Op: OpXor, Args: []*Node{x, y}}
+}
+
+func NewLess(x, y *Node) *Node {
+	return &Node{Op: OpLess, Args: []*Node{x, y}}
+}
+
+func NewLessOrEqual(x, y *Node) *Node {
+	return &Node{Op: OpLessOrEqual, Args: []*Node{x, y}}
+}
+
+func NewGreater(x, y *Node) *Node {
+	return &Node{Op: OpGreater, Args: []*Node{x, y}}
+}
+
+func NewGreaterOrEqual(x, y *Node) *Node {
+	return &Node{Op: OpGreaterOrEqual, Args: []*Node{x, y}}
+}
+
+func NewEqual(x, y *Node) *Node {
+	return &Node{Op: OpEqual, Args: []*Node{x, y}}
+}
+
+func NewEqualStrict(x, y *Node) *Node {
+	return &Node{Op: OpEqualStrict, Args: []*Node{x, y}}
 }
