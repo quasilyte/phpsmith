@@ -34,12 +34,12 @@ func _() {
 	_ = x[OpProp-23]
 	_ = x[OpIndex-24]
 	_ = x[OpNegation-25]
-	_ = x[OpIdentity-26]
+	_ = x[OpUnaryPlus-26]
 	_ = x[OpConcat-27]
 	_ = x[OpAdd-28]
 	_ = x[OpSub-29]
 	_ = x[OpDiv-30]
-	_ = x[OpMult-31]
+	_ = x[OpMul-31]
 	_ = x[OpMod-32]
 	_ = x[OpExp-33]
 	_ = x[OpAnd-34]
@@ -55,19 +55,19 @@ func _() {
 	_ = x[OpGreaterOrEqual-44]
 	_ = x[OpEqual2-45]
 	_ = x[OpEqual3-46]
-	_ = x[OpNotEqual-47]
-	_ = x[OpNotEqual2-48]
-	_ = x[OpNotEqual3-49]
-	_ = x[OpSpaceShip-50]
-	_ = x[OpPostInc-51]
-	_ = x[OpPreInc-52]
-	_ = x[OpPostDec-53]
-	_ = x[OpPreDec-54]
+	_ = x[OpNotEqual2-47]
+	_ = x[OpNotEqual3-48]
+	_ = x[OpSpaceship-49]
+	_ = x[OpPostInc-50]
+	_ = x[OpPreInc-51]
+	_ = x[OpPostDec-52]
+	_ = x[OpPreDec-53]
+	_ = x[OpCast-54]
 }
 
-const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexNegationIdentityConcatAddSubDivMultModExpAndAndWordOrOrWordXorWordTernaryCallLessLessOrEqualGreaterGreaterOrEqualEqual2Equal3NotEqualNotEqual2NotEqual3SpaceShipPostIncPreIncPostDecPreDec"
+const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexNegationUnaryPlusConcatAddSubDivMulModExpAndAndWordOrOrWordXorWordTernaryCallLessLessOrEqualGreaterGreaterOrEqualEqual2Equal3NotEqual2NotEqual3SpaceshipPostIncPreIncPostDecPreDecCast"
 
-var _Op_index = [...]uint16{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 157, 165, 171, 174, 177, 180, 184, 187, 190, 193, 200, 202, 208, 215, 222, 226, 230, 241, 248, 262, 268, 274, 282, 291, 300, 309, 316, 322, 329, 335}
+var _Op_index = [...]uint16{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 157, 166, 172, 175, 178, 181, 184, 187, 190, 193, 200, 202, 208, 215, 222, 226, 230, 241, 248, 262, 268, 274, 283, 292, 301, 308, 314, 321, 327, 331}
 
 func (i Op) String() string {
 	if i < 0 || i >= Op(len(_Op_index)-1) {

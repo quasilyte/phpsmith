@@ -103,7 +103,7 @@ const (
 	OpNegation
 
 	// '+' $Args[0]
-	OpIdentity
+	OpUnaryPlus
 
 	// $Args[0] '.' $Args[1]
 	OpConcat
@@ -118,7 +118,7 @@ const (
 	OpDiv
 
 	// $Args[0] '*' $Args[1]
-	OpMult
+	OpMul
 
 	// $Args[0] '%' $Args[1]
 	OpMod
@@ -165,9 +165,6 @@ const (
 	// $Args[0] '===' $Args[1]
 	OpEqual3
 
-	// $Args[0] '<>' $Args[1]
-	OpNotEqual
-
 	// $Args[0] '!=' $Args[1]
 	OpNotEqual2
 
@@ -175,7 +172,7 @@ const (
 	OpNotEqual3
 
 	// $Args[0] '<=>' $Args[1]
-	OpSpaceShip
+	OpSpaceship
 
 	// $Args[0] '++'
 	OpPostInc
@@ -380,10 +377,6 @@ func NewXorWord(x, y *Node) *Node {
 	return &Node{Op: OpXorWord, Args: []*Node{x, y}}
 }
 
-func NewNotEqual(x, y *Node) *Node {
-	return &Node{Op: OpNotEqual, Args: []*Node{x, y}}
-}
-
 func NewNotEqual2(x, y *Node) *Node {
 	return &Node{Op: OpNotEqual2, Args: []*Node{x, y}}
 }
@@ -393,7 +386,7 @@ func NewNotEqual3(x, y *Node) *Node {
 }
 
 func NewSpaceShip(x, y *Node) *Node {
-	return &Node{Op: OpSpaceShip, Args: []*Node{x, y}}
+	return &Node{Op: OpSpaceship, Args: []*Node{x, y}}
 }
 
 func NewMod(x, y *Node) *Node {
@@ -404,8 +397,8 @@ func NewExp(x, y *Node) *Node {
 	return &Node{Op: OpExp, Args: []*Node{x, y}}
 }
 
-func NewMult(x, y *Node) *Node {
-	return &Node{Op: OpMult, Args: []*Node{x, y}}
+func NewMul(x, y *Node) *Node {
+	return &Node{Op: OpMul, Args: []*Node{x, y}}
 }
 
 func NewDiv(x, y *Node) *Node {
@@ -416,8 +409,8 @@ func NewNegation(x *Node) *Node {
 	return &Node{Op: OpNegation, Args: []*Node{x}}
 }
 
-func NewIdentity(x *Node) *Node {
-	return &Node{Op: OpIdentity, Args: []*Node{x}}
+func NewUnaryPlus(x *Node) *Node {
+	return &Node{Op: OpUnaryPlus, Args: []*Node{x}}
 }
 
 var opLit = map[Op]string{
@@ -425,7 +418,7 @@ var opLit = map[Op]string{
 	OpConcat: ".",
 	OpSub:    "-",
 	OpDiv:    "/",
-	OpMult:   "*",
+	OpMul:    "*",
 	OpExp:    "**",
 	OpMod:    "%",
 }
