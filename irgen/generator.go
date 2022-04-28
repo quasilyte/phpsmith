@@ -62,7 +62,7 @@ func (g *generator) CreateProgram() *Program {
 		{Name: "fuzzlib.php", Contents: phpFuzzlib},
 	}
 
-	numLibs := randutil.IntRange(g.rand, 1, 3)
+	numLibs := randutil.IntRange(g.rand, 3, 5)
 	for i := 0; i < numLibs; i++ {
 		filename := fmt.Sprintf("lib%d.php", i)
 		g.files = append(g.files, g.createLibFile(filename))
