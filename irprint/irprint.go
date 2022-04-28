@@ -44,6 +44,21 @@ type printer struct {
 	depth  int
 }
 
+type printFlags int
+
+const (
+	flagNeedSemicolon printFlags = 1 << iota
+	flagNeedNewline
+)
+
+func (flags printFlags) NeedSemicolon() bool {
+	return flags&flagNeedSemicolon != 0
+}
+
+func (flags printFlags) NeedNewline() bool {
+	return flags&flagNeedNewline != 0
+}
+
 func (p *printer) indent() {
 	for i := 0; i < p.depth; i++ {
 		p.w.WriteByte(' ')
@@ -83,18 +98,25 @@ func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
 }
 
 //nolint:gocyclo
-func (p *printer) printNode(n *ir.Node) {
+func (p *printer) printNode(n *ir.Node) printFlags {
 	switch n.Op {
 	case ir.OpBlock:
 		p.depth += 2
 		p.w.WriteString("{\n")
 		for _, stmt := range n.Args {
 			p.indent()
-			p.printNode(stmt)
-			p.w.WriteString(";\n")
+			flags := p.printNode(stmt)
+			if flags.NeedSemicolon() {
+				p.w.WriteByte(';')
+			}
+			if flags.NeedNewline() {
+				p.w.WriteString("\n")
+			}
 		}
-		p.w.WriteString("}\n")
 		p.depth -= 2
+		p.indent()
+		p.w.WriteString("}\n")
+		return 0
 
 	case ir.OpEcho:
 		p.w.WriteString("echo ")
@@ -216,7 +238,15 @@ func (p *printer) printNode(n *ir.Node) {
 		p.w.WriteString(n.Type.String())
 		p.w.WriteByte(')')
 		p.printNode(n.Args[0])
+
+	case ir.OpIf:
+		p.w.WriteString("if (")
+		p.printNode(n.Args[0])
+		p.w.WriteString(") ")
+		return p.printNode(n.Args[1])
 	}
+
+	return flagNeedNewline | flagNeedSemicolon
 }
 
 func (p *printer) printUnaryPrefix(n *ir.Node, op string) {

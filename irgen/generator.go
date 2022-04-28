@@ -1,14 +1,18 @@
 package irgen
 
 import (
+	"math/rand"
 	"strconv"
 
 	"github.com/quasilyte/phpsmith/ir"
 	"github.com/quasilyte/phpsmith/phpfunc"
+	"github.com/quasilyte/phpsmith/randutil"
 )
 
 type generator struct {
 	config *Config
+
+	rand *rand.Rand
 
 	files []*File
 
@@ -49,6 +53,7 @@ func newGenerator(config *Config) *generator {
 	s := newScope()
 	return &generator{
 		config: config,
+		rand:   config.Rand,
 		symtab: symtab,
 		scope:  s,
 		expr:   newExprGenerator(config, s, symtab),
@@ -83,10 +88,14 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 	g.varNameSeq = 0
 	g.currentBlock = fn.Body
 
-	blockVars := make([]string, 6)
+	blockVars := make([]string, randutil.IntRange(g.rand, 3, 7))
 	for i := range blockVars {
 		blockVars[i] = g.genVarname()
 		g.pushVarDecl(blockVars[i])
+	}
+	numStatements := randutil.IntRange(g.rand, 3, 10)
+	for i := 0; i < numStatements; i++ {
+		g.pushStatement()
 	}
 	for _, name := range blockVars {
 		v := g.scope.FindVarByName(name)
@@ -110,4 +119,46 @@ func (g *generator) pushVarDecl(name string) {
 	assign := ir.NewAssign(lhs, rhs)
 	g.currentBlock.Args = append(g.currentBlock.Args, assign)
 	g.scope.PushVar(name, typ)
+}
+
+func (g *generator) pushStatement() {
+	switch randutil.IntRange(g.rand, 0, 4) {
+	case 0, 1, 2:
+		g.pushVarDecl(g.genVarname())
+	case 3:
+		g.pushBlockStmt()
+	case 4:
+		g.pushIfStmt()
+	}
+}
+
+func (g *generator) pushBlockStmt() {
+	newBlock := &ir.Node{Op: ir.OpBlock}
+	oldBlock := g.currentBlock
+	g.currentBlock = newBlock
+	numStatements := randutil.IntRange(g.rand, 1, 3)
+	for i := 0; i < numStatements; i++ {
+		g.pushStatement()
+	}
+	oldBlock.Args = append(oldBlock.Args, newBlock)
+	g.currentBlock = oldBlock
+}
+
+func (g *generator) pushIfStmt() {
+	cond := g.expr.condValue()
+
+	withoutBlock := randutil.IntRange(g.rand, 0, 1) == 0
+	oldBlock := g.currentBlock
+	if withoutBlock {
+		ifStmt := &ir.Node{Op: ir.OpIf, Args: []*ir.Node{cond}}
+		g.currentBlock = ifStmt
+		g.pushStatement()
+		oldBlock.Args = append(oldBlock.Args, ir.NewIf(cond, ifStmt))
+	} else {
+		newBlock := &ir.Node{Op: ir.OpBlock}
+		g.currentBlock = newBlock
+		g.pushStatement()
+		oldBlock.Args = append(oldBlock.Args, ir.NewIf(cond, newBlock))
+	}
+	g.currentBlock = oldBlock
 }
