@@ -188,6 +188,9 @@ const (
 
 	// '--' $Args[0]
 	OpPreDec
+
+	// ($Type)$Args[0]
+	OpCast
 )
 
 var statementOpsMap = [...]bool{
