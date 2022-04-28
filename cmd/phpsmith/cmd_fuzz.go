@@ -52,6 +52,7 @@ func cmdFuzz(args []string) error {
 		cancel()
 	}()
 
+	filesCh := make(chan string, 100)
 out:
 	for {
 		select {
@@ -67,8 +68,16 @@ out:
 
 		for i := 0; i < *flagConcurrency; i++ {
 			eg.Go(func() error {
-				return runner(ctx, files, seed)
+				return runner(ctx, filesCh, seed)
 			})
+		}
+
+		for _, file := range files {
+			select {
+			case filesCh <- file:
+			case <-ctx.Done():
+				break out
+			}
 		}
 
 		if err = eg.Wait(); err != nil {
@@ -79,8 +88,8 @@ out:
 	return nil
 }
 
-func runner(ctx context.Context, files []string, seed int64) error {
-	for _, filename := range files {
+func runner(ctx context.Context, files <-chan string, seed int64) error {
+	for filename := range files {
 		if err := fuzzingProcess(ctx, filename, seed); err != nil {
 			return err
 		}
