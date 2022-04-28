@@ -157,6 +157,22 @@ func (p *printer) printNode(n *ir.Node) {
 		p.w.WriteString(" : ")
 		p.printNode(n.Args[2])
 
+	case ir.OpArrayLit:
+		if len(n.Args) == 0 {
+			p.w.WriteString("[]")
+		} else {
+			p.w.WriteString("[\n")
+			p.depth += 2
+			for _, elem := range n.Args {
+				p.indent()
+				p.printNode(elem)
+				p.w.WriteString(",\n")
+			}
+			p.depth -= 2
+			p.indent()
+			p.w.WriteString("]")
+		}
+
 	case ir.OpCall:
 		p.printNode(n.Args[0])
 		p.w.WriteByte('(')
