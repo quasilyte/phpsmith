@@ -30,8 +30,6 @@ func cmdFuzz(args []string) error {
 	fs := flag.NewFlagSet("phpsmith fuzz", flag.ExitOnError)
 	flagConcurrency := fs.Int("flagConcurrency", 1,
 		"Number of concurrent runners. Defaults to the half number of available CPU cores.")
-	flagSeed := fs.Int64("seed", 0,
-		`a seed to be used during the code generation, 0 means "randomized seed"`)
 	flagOutputDir := fs.String("o", "phpsmith_out",
 		`output dir`)
 
@@ -39,14 +37,9 @@ func cmdFuzz(args []string) error {
 
 	concurrency := *flagConcurrency
 	dir := *flagOutputDir
-	seed := *flagSeed
 
 	if concurrency == 1 && runtime.NumCPU()/2 > 1 {
 		concurrency = runtime.NumCPU() / 2
-	}
-
-	if seed == 0 {
-		seed = time.Now().Unix()
 	}
 
 	interrupt := make(chan os.Signal, 1)
@@ -60,24 +53,25 @@ func cmdFuzz(args []string) error {
 		cancel()
 	}()
 
-	dirCh := make(chan string, concurrency)
+	dirCh := make(chan dirAndSeed, concurrency)
 	for i := 0; i < concurrency; i++ {
 		eg.Go(func() error {
-			return runner(ctx, dirCh, seed)
+			return runner(ctx, dirCh)
 		})
 	}
 
 	randomizer := rand.New(rand.NewSource(time.Now().Unix()))
 out:
 	for {
-		newDir := dir + strconv.Itoa(randomizer.Int())
+		seed := randomizer.Int63()
+		newDir := dir + "_" + strconv.FormatInt(seed, 10)
 		if err := generate(newDir, seed); err != nil {
 			log.Println("on generate: ", err)
 			continue
 		}
 
 		select {
-		case dirCh <- newDir:
+		case dirCh <- dirAndSeed{Dir: newDir, Seed: seed}:
 		case <-ctx.Done():
 			break out
 		}
@@ -90,54 +84,59 @@ out:
 	return nil
 }
 
-func runner(ctx context.Context, dirs <-chan string, seed int64) error {
+func runner(ctx context.Context, dirCh <-chan dirAndSeed) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case dir := <-dirs:
-			if err := fuzzingProcess(ctx, dir, seed); err != nil {
+		case ds := <-dirCh:
+			if err := fuzzingProcess(ctx, ds); err != nil {
 				log.Println("on fuzzingProcess:", err)
 			}
-			log.Println("dir processed:", dir)
+			log.Println("dir processed:", ds.Dir, ds.Seed)
 		}
 	}
 }
 
-type ExecutorOutput struct {
+type executorOutput struct {
 	Output string
 	Error  string
 }
 
-func fuzzingProcess(ctx context.Context, dir string, seed int64) error {
-	var results = make(map[int]ExecutorOutput, len(executors))
+type dirAndSeed struct {
+	Dir  string
+	Seed int64
+}
+
+func fuzzingProcess(ctx context.Context, ds dirAndSeed) error {
+	var results = make(map[int]executorOutput, len(executors))
 	for i, ex := range executors {
 		var errMsg string
-		r, err := ex(ctx, dir, seed)
+		r, err := ex(ctx, ds.Dir, ds.Seed)
 
 		if err != nil {
 			errMsg = err.Error()
 		}
 
-		grepExceptions(r, seed)
-		results[i] = ExecutorOutput{
+		grepExceptions(r, ds.Seed)
+		results[i] = executorOutput{
 			Output: string(r),
 			Error:  errMsg,
 		}
 	}
 
 	if diff := cmp.Diff(results[0].Output, results[1].Output); diff != "" {
-		l, err := os.OpenFile("./"+dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
+		l, err := os.OpenFile("./"+ds.Dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
 		if err != nil {
 			log.Println("-----------------------------")
-			log.Printf("diff: %s\t, seed: %d\t\n", diff, seed)
+			log.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
 			log.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
 			log.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
 		} else {
 			defer l.Close()
 
 			logger := log.New(l, "", 0)
-			logger.Printf("diff: %s\t, seed: %d\t\n", diff, seed)
+			logger.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
 			logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
 			logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
 		}
