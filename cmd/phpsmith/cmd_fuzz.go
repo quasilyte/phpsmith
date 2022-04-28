@@ -59,7 +59,7 @@ func cmdFuzz(args []string) error {
 		cancel()
 	}()
 
-	dirCh := make(chan string, 100)
+	dirCh := make(chan string, concurrency)
 	for i := 0; i < concurrency; i++ {
 		eg.Go(func() error {
 			return runner(ctx, dirCh, seed)
