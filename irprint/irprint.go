@@ -34,7 +34,7 @@ var modifyOpLit = map[ir.Op]string{
 	ir.OpBitNot:        "~",
 	ir.OpBitShiftLeft:  "<<",
 	ir.OpBitShiftRight: ">>",
-	ir.OpNullCoales:    "??",
+	ir.OpNullCoalesce:  "??",
 }
 
 func FprintRootNode(w io.Writer, n ir.RootNode, config *Config) {
@@ -177,7 +177,7 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpConcat:
 		p.printBinary(n, ".")
 
-	case ir.OpNullCoales:
+	case ir.OpNullCoalesce:
 		p.printBinary(n, "??")
 	case ir.OpBitShiftRight:
 		p.printBinary(n, ">>")
