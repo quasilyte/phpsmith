@@ -67,7 +67,20 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 			typ := g.PickScalarType()
 			x := g.GenerateValueOfType(typ)
 			y := g.GenerateValueOfType(typ)
-			return &ir.Node{Op: op, Args: []*ir.Node{g.maybeAddParens(x), g.maybeAddParens(y)}}
+			resultOp := op
+			if scalarType, ok := typ.(*ir.ScalarType); ok && scalarType.Kind == ir.ScalarFloat {
+				switch resultOp {
+				case ir.OpEqual2:
+					resultOp = ir.OpFloatEqual2
+				case ir.OpEqual3:
+					resultOp = ir.OpFloatEqual3
+				case ir.OpNotEqual2:
+					resultOp = ir.OpNotFloatEqual2
+				case ir.OpNotEqual3:
+					resultOp = ir.OpNotFloatEqual3
+				}
+			}
+			return &ir.Node{Op: resultOp, Args: []*ir.Node{g.maybeAddParens(x), g.maybeAddParens(y)}}
 		}
 	}
 

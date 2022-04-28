@@ -54,27 +54,31 @@ func _() {
 	_ = x[OpGreater-43]
 	_ = x[OpGreaterOrEqual-44]
 	_ = x[OpEqual2-45]
-	_ = x[OpEqual3-46]
-	_ = x[OpNotEqual2-47]
-	_ = x[OpNotEqual3-48]
-	_ = x[OpSpaceship-49]
-	_ = x[OpPostInc-50]
-	_ = x[OpPreInc-51]
-	_ = x[OpPostDec-52]
-	_ = x[OpPreDec-53]
-	_ = x[OpCast-54]
-	_ = x[OpBitAnd-55]
-	_ = x[OpBitOr-56]
-	_ = x[OpBitXor-57]
-	_ = x[OpBitNot-58]
-	_ = x[OpBitShiftLeft-59]
-	_ = x[OpBitShiftRight-60]
-	_ = x[OpNullCoalesce-61]
+	_ = x[OpFloatEqual2-46]
+	_ = x[OpEqual3-47]
+	_ = x[OpFloatEqual3-48]
+	_ = x[OpNotEqual2-49]
+	_ = x[OpNotFloatEqual2-50]
+	_ = x[OpNotEqual3-51]
+	_ = x[OpNotFloatEqual3-52]
+	_ = x[OpSpaceship-53]
+	_ = x[OpPostInc-54]
+	_ = x[OpPreInc-55]
+	_ = x[OpPostDec-56]
+	_ = x[OpPreDec-57]
+	_ = x[OpCast-58]
+	_ = x[OpBitAnd-59]
+	_ = x[OpBitOr-60]
+	_ = x[OpBitXor-61]
+	_ = x[OpBitNot-62]
+	_ = x[OpBitShiftLeft-63]
+	_ = x[OpBitShiftRight-64]
+	_ = x[OpNullCoalesce-65]
 }
 
-const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexNegationUnaryPlusConcatAddSubDivMulModExpAndAndWordOrOrWordXorWordTernaryCallLessLessOrEqualGreaterGreaterOrEqualEqual2Equal3NotEqual2NotEqual3SpaceshipPostIncPreIncPostDecPreDecCastBitAndBitOrBitXorBitNotBitShiftLeftBitShiftRightNullCoalesce"
+const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexNegationUnaryPlusConcatAddSubDivMulModExpAndAndWordOrOrWordXorWordTernaryCallLessLessOrEqualGreaterGreaterOrEqualEqual2FloatEqual2Equal3FloatEqual3NotEqual2NotFloatEqual2NotEqual3NotFloatEqual3SpaceshipPostIncPreIncPostDecPreDecCastBitAndBitOrBitXorBitNotBitShiftLeftBitShiftRightNullCoalesce"
 
-var _Op_index = [...]uint16{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 157, 166, 172, 175, 178, 181, 184, 187, 190, 193, 200, 202, 208, 215, 222, 226, 230, 241, 248, 262, 268, 274, 283, 292, 301, 308, 314, 321, 327, 331, 337, 342, 348, 354, 366, 379, 391}
+var _Op_index = [...]uint16{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 157, 166, 172, 175, 178, 181, 184, 187, 190, 193, 200, 202, 208, 215, 222, 226, 230, 241, 248, 262, 268, 279, 285, 296, 305, 319, 328, 342, 351, 358, 364, 371, 377, 381, 387, 392, 398, 404, 416, 429, 441}
 
 func (i Op) String() string {
 	if i < 0 || i >= Op(len(_Op_index)-1) {

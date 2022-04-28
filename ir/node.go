@@ -163,14 +163,26 @@ const (
 	// $Args[0] '==' $Args[1]
 	OpEqual2
 
+	// $Args[0] '==' $Args[1]
+	OpFloatEqual2
+
 	// $Args[0] '===' $Args[1]
 	OpEqual3
+
+	// $Args[0] '===' $Args[1]
+	OpFloatEqual3
 
 	// $Args[0] '!=' $Args[1]
 	OpNotEqual2
 
+	// $Args[0] '!=' $Args[1]
+	OpNotFloatEqual2
+
 	// $Args[0] '!==' $Args[1]
 	OpNotEqual3
+
+	// $Args[0] '!==' $Args[1]
+	OpNotFloatEqual3
 
 	// $Args[0] '<=>' $Args[1]
 	OpSpaceship

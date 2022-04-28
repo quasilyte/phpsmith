@@ -155,6 +155,19 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpReturnVoid:
 		p.w.WriteString("return")
 
+	case ir.OpContinue:
+		if n.Value.(int) == 0 {
+			p.w.WriteString("continue")
+		} else {
+			fmt.Fprintf(p.w, "continue %d", n.Value.(int))
+		}
+	case ir.OpBreak:
+		if n.Value.(int) == 0 {
+			p.w.WriteString("break")
+		} else {
+			fmt.Fprintf(p.w, "break %d", n.Value.(int))
+		}
+
 	case ir.OpBoolLit:
 		fmt.Fprintf(p.w, "%v", n.Value)
 	case ir.OpIntLit:
@@ -217,8 +230,12 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.printBinary(n, "*")
 	case ir.OpNotEqual2:
 		p.printBinary(n, "!=")
+	case ir.OpNotFloatEqual2:
+		p.printSimpleCall("float_neq2", n.Args)
 	case ir.OpNotEqual3:
 		p.printBinary(n, "!==")
+	case ir.OpNotFloatEqual3:
+		p.printSimpleCall("float_neq3", n.Args)
 	case ir.OpSpaceship:
 		p.printBinary(n, "<=>")
 	case ir.OpAndWord:
@@ -234,8 +251,12 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 
 	case ir.OpEqual2:
 		p.printBinary(n, "==")
+	case ir.OpFloatEqual2:
+		p.printSimpleCall("float_eq2", n.Args)
 	case ir.OpEqual3:
 		p.printBinary(n, "===")
+	case ir.OpFloatEqual3:
+		p.printSimpleCall("float_eq3", n.Args)
 	case ir.OpLess:
 		p.printBinary(n, "<")
 	case ir.OpLessOrEqual:
@@ -294,6 +315,12 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.w.WriteString(n.Type.String())
 		p.w.WriteByte(')')
 		p.printNode(n.Args[0])
+
+	case ir.OpWhile:
+		p.w.WriteString("while (")
+		p.printNode(n.Args[0])
+		p.w.WriteString(") ")
+		return p.printNode(n.Args[1])
 
 	case ir.OpIf:
 		p.w.WriteString("if (")
