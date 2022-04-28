@@ -113,6 +113,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 4, generate: binaryOpGenerator(ir.OpOr, g.boolValue)},
 		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 5, generate: g.boolVar, fallback: g.boolLit},
+		{freq: 6, generate: g.boolCall},
 		{freq: 1, generate: g.boolLit},
 	})
 
@@ -124,13 +125,14 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 6, generate: g.boolVar, fallback: g.boolLit},
 		{freq: 3, generate: g.boolLit},
+		{freq: 4, generate: g.boolCall},
 	})
 
 	g.intChoices = makeChoicesList(g.intLit, []exprChoice{
 		{freq: 1, generate: g.intTernary},
-		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.intValue)},
+		{freq: 2, generate: withCast(binaryOpGenerator(ir.OpAdd, g.intValue), ir.IntType)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.intValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpMul, g.intValue)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMul, g.intValue), ir.IntType)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitAnd, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitOr, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitXor, g.intValue)},
@@ -139,7 +141,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMod, g.intValue), ir.IntType)},
 		{freq: 2, generate: g.intNegation},
 		{freq: 2, generate: g.intCast},
-		{freq: 4, generate: g.intCall},
+		{freq: 7, generate: g.intCall},
 		{freq: 4, generate: g.intLit},
 		{freq: 6, generate: g.intVar, fallback: g.intLit},
 	})
@@ -150,13 +152,14 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.floatValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpDiv, g.floatValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpMul, g.floatValue)},
+		{freq: 5, generate: g.floatCall},
 		{freq: 6, generate: g.floatVar, fallback: g.floatLit},
 		{freq: 5, generate: g.floatLit},
 	})
 
 	g.stringChoices = makeChoicesList(g.stringLit, []exprChoice{
 		{freq: 2, generate: g.stringCast},
-		{freq: 3, generate: g.stringCall},
+		{freq: 5, generate: g.stringCall},
 		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, g.stringValue)},
 		{freq: 5, generate: g.stringLit},
 		{freq: 6, generate: g.stringVar, fallback: g.stringLit},
@@ -355,14 +358,26 @@ func (g *exprGenerator) callOfType(fn *ir.FuncType) *ir.Node {
 	numArgs := randutil.IntRange(g.rand, fn.MinArgsNum, len(fn.Params))
 	callArgs := make([]*ir.Node, numArgs)
 	for i := range callArgs {
-		callArgs[i] = g.GenerateValueOfType(fn.Params[i].Type)
+		arg := g.GenerateValueOfType(fn.Params[i].Type)
+		if fn.Params[i].Strict {
+			arg = &ir.Node{Op: ir.OpCast, Args: []*ir.Node{g.maybeAddParens(arg)}, Type: fn.Params[i].Type}
+		}
+		callArgs[i] = arg
 	}
 	funcExpr := ir.NewName(fn.Name)
 	return ir.NewCall(funcExpr, callArgs...)
 }
 
+func (g *exprGenerator) boolCall() *ir.Node {
+	return g.callOfType(g.symtab.boolFuncs[g.rand.Intn(len(g.symtab.boolFuncs))])
+}
+
 func (g *exprGenerator) intCall() *ir.Node {
 	return g.callOfType(g.symtab.intFuncs[g.rand.Intn(len(g.symtab.intFuncs))])
+}
+
+func (g *exprGenerator) floatCall() *ir.Node {
+	return g.callOfType(g.symtab.floatFuncs[g.rand.Intn(len(g.symtab.floatFuncs))])
 }
 
 func (g *exprGenerator) stringCall() *ir.Node {

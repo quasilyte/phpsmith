@@ -204,7 +204,7 @@ func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 	} else {
 		for _, name := range blockVars {
 			v := g.scope.FindVarByName(name)
-			varDump := ir.NewCall(ir.NewName("var_dump"), ir.NewVar(name, v.typ))
+			varDump := g.varDumpCall(ir.NewVar(name, v.typ))
 			g.currentBlock.Args = append(g.currentBlock.Args, varDump)
 		}
 	}
@@ -222,6 +222,12 @@ func (g *generator) pushVarDecl(name string) {
 	typ := g.expr.PickType()
 	lhs := ir.NewVar(name, typ)
 	rhs := g.expr.GenerateValueOfType(typ)
+	if scalarType, ok := typ.(*ir.ScalarType); ok {
+		switch scalarType.Kind {
+		case ir.ScalarFloat, ir.ScalarInt:
+			rhs = &ir.Node{Op: ir.OpCast, Args: []*ir.Node{rhs}, Type: typ}
+		}
+	}
 	assign := ir.NewAssign(lhs, rhs)
 	if scalarType, ok := typ.(*ir.ScalarType); ok && scalarType.Kind == ir.ScalarBool {
 		assign.Value = &phpdoc.VarTag{VarName: "$" + name, Type: "bool"}
@@ -369,9 +375,15 @@ func (g *generator) pushVarDump() {
 	arg := g.expr.GenerateValueOfType(typ)
 	switch typ.(type) {
 	case *ir.ScalarType, *ir.ArrayType:
-		varDump := ir.NewCall(ir.NewName("var_dump"), arg)
+		varDump := g.varDumpCall(arg)
 		g.currentBlock.Args = append(g.currentBlock.Args, varDump)
 	}
+}
+
+func (g *generator) varDumpCall(arg *ir.Node) *ir.Node {
+	file := ir.NewName("__FILE__")
+	line := ir.NewName("__LINE__")
+	return ir.NewCall(ir.NewName("dump_with_pos"), file, line, arg)
 }
 
 func (g *generator) pushBlockStmt() {
