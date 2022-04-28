@@ -230,10 +230,10 @@ func (g *exprGenerator) varOfType(typ ir.Type) *ir.Node {
 	return ir.NewVar(v.name, v.typ)
 }
 
-func (g *exprGenerator) boolVar() *ir.Node   { return g.varOfType(boolType) }
-func (g *exprGenerator) intVar() *ir.Node    { return g.varOfType(intType) }
-func (g *exprGenerator) floatVar() *ir.Node  { return g.varOfType(floatType) }
-func (g *exprGenerator) stringVar() *ir.Node { return g.varOfType(stringType) }
+func (g *exprGenerator) boolVar() *ir.Node   { return g.varOfType(ir.BoolType) }
+func (g *exprGenerator) intVar() *ir.Node    { return g.varOfType(ir.IntType) }
+func (g *exprGenerator) floatVar() *ir.Node  { return g.varOfType(ir.FloatType) }
+func (g *exprGenerator) stringVar() *ir.Node { return g.varOfType(ir.StringType) }
 
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 	numElems := randutil.IntRange(g.rand, 1, 4)
@@ -271,8 +271,8 @@ var stringLitValues = []*ir.Node{
 }
 
 var scalarTypes = []ir.Type{
-	boolType,
-	intType,
-	floatType,
-	stringType,
+	ir.BoolType,
+	ir.IntType,
+	ir.FloatType,
+	ir.StringType,
 }
