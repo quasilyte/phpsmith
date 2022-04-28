@@ -41,7 +41,7 @@ func main() {
 	subcmd.Run(cmds)
 }
 
-func versionMain(args []string) {
+func versionMain(_ []string) {
 	if BuildCommit == "" {
 		fmt.Printf("phpsmith built without version info\n")
 	} else {
