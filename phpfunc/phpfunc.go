@@ -23,6 +23,13 @@ func init() {
 
 var funcList = []*ir.FuncType{
 	{
+		Name: "json_encode",
+		Params: []ir.TypeField{
+			{Name: "value", Type: ir.MixedType},
+		},
+		Result: ir.StringType,
+	},
+	{
 		Name: "strtolower",
 		Params: []ir.TypeField{
 			{Name: "str", Type: ir.StringType},
