@@ -185,6 +185,17 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpStringLit:
 		p.printString(n)
 
+	case ir.OpInterpolatedString:
+		p.w.WriteByte('"')
+		for _, part := range n.Args {
+			if part.Op == ir.OpVar {
+				p.w.WriteString("{$" + part.Value.(string) + "}")
+			} else {
+				p.w.Write(p.getStringBytes(part.Value.(string)))
+			}
+		}
+		p.w.WriteByte('"')
+
 	case ir.OpVar:
 		p.w.WriteString("$" + n.Value.(string))
 	case ir.OpName:
@@ -403,8 +414,7 @@ func (p *printer) printNodes(nodes []*ir.Node, sep string) {
 	}
 }
 
-func (p *printer) printString(n *ir.Node) {
-	s := n.Value.(string)
+func (p *printer) getStringBytes(s string) []byte {
 	var buf bytes.Buffer
 	buf.Grow(len(s))
 	for i := 0; i < len(s); i++ {
@@ -440,9 +450,13 @@ func (p *printer) printString(n *ir.Node) {
 			}
 		}
 	}
+	return buf.Bytes()
+}
 
+func (p *printer) printString(n *ir.Node) {
+	s := n.Value.(string)
 	quote := byte('"')
 	p.w.WriteByte(quote)
-	p.w.Write(buf.Bytes())
+	p.w.Write(p.getStringBytes(s))
 	p.w.WriteByte(quote)
 }

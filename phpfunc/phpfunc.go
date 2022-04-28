@@ -810,15 +810,15 @@ var funcList = []*ir.FuncType{
 		},
 		Result: &ir.ArrayType{Elem: ir.MixedType},
 	},
-	{
-		Name: "in_array",
-		Params: []ir.TypeField{
-			{Name: "value", Type: ir.MixedType},
-			{Name: "a", Type: &ir.ArrayType{Elem: ir.MixedType}},
-			{Name: "strict", Type: ir.BoolType, Init: false},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "in_array",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "value", Type: ir.MixedType},
+	// 		{Name: "a", Type: &ir.ArrayType{Elem: ir.MixedType}},
+	// 		{Name: "strict", Type: ir.BoolType, Init: false},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	{
 		Name: "sizeof",
 		Params: []ir.TypeField{
