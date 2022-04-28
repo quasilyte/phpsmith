@@ -88,6 +88,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 1, generate: g.intTernary},
 		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.intValue)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.intValue)},
+		{freq: 2, generate: g.intCast},
 		{freq: 3, generate: g.intCall},
 		{freq: 5, generate: g.intLit},
 		{freq: 6, generate: g.intVar, fallback: g.intLit},
@@ -102,6 +103,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	})
 
 	g.stringChoices = makeChoicesList([]exprChoice{
+		{freq: 2, generate: g.stringCast},
 		{freq: 3, generate: g.stringCall},
 		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, g.stringValue)},
 		{freq: 5, generate: g.stringLit},
@@ -207,12 +209,26 @@ func (g *exprGenerator) mixedValue() *ir.Node {
 	panic("unreachable")
 }
 
+func (g *exprGenerator) newTernary(cond, x, y *ir.Node) *ir.Node {
+	if x.Op == ir.OpTernary {
+		x = ir.NewParens(x)
+	}
+	if y.Op == ir.OpTernary {
+		y = ir.NewParens(y)
+	}
+	ternary := ir.NewTernary(cond, x, y)
+	if randutil.Bool(g.rand) {
+		ternary = ir.NewParens(ternary)
+	}
+	return ternary
+}
+
 func (g *exprGenerator) intTernary() *ir.Node {
-	return ir.NewTernary(g.condValue(), g.intValue(), g.intValue())
+	return g.newTernary(g.condValue(), g.intValue(), g.intValue())
 }
 
 func (g *exprGenerator) floatTernary() *ir.Node {
-	return ir.NewTernary(g.condValue(), g.floatValue(), g.floatValue())
+	return g.newTernary(g.condValue(), g.floatValue(), g.floatValue())
 }
 
 func (g *exprGenerator) boolLit() *ir.Node {
@@ -271,6 +287,16 @@ func (g *exprGenerator) stringCall() *ir.Node {
 	return g.callOfType(g.symtab.stringFuncs[g.rand.Intn(len(g.symtab.stringFuncs))])
 }
 
+func (g *exprGenerator) intCast() *ir.Node {
+	arg := g.mixedValue()
+	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: ir.IntType}
+}
+
+func (g *exprGenerator) stringCast() *ir.Node {
+	arg := g.mixedValue()
+	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: ir.StringType}
+}
+
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 	numElems := randutil.IntRange(g.rand, 1, 4)
 	elems := make([]*ir.Node, numElems)
@@ -303,6 +329,10 @@ var stringLitValues = []*ir.Node{
 	ir.NewStringLit(""),
 	ir.NewStringLit(","),
 	ir.NewStringLit(" "),
+	ir.NewStringLit("0x1f"),
+	ir.NewStringLit("000"),
+	ir.NewStringLit("24"),
+	ir.NewStringLit("-123"),
 	ir.NewStringLit("\x00"),
 	ir.NewStringLit("simple string"),
 	ir.NewStringLit("1\n2"),
