@@ -206,6 +206,9 @@ const (
 
 	// $Args[0] >> $Args[1]
 	OpBitShiftRight
+
+	// $Args[0] ?? $Args[1]
+	OpNullCoales
 )
 
 var statementOpsMap = [...]bool{
@@ -453,4 +456,8 @@ func NewBitShiftLeft(x, y *Node) *Node {
 
 func NewBitShiftRight(x, y *Node) *Node {
 	return &Node{Op: OpBitShiftRight, Args: []*Node{x, y}}
+}
+
+func NewNullCoales(x, y *Node) *Node {
+	return &Node{Op: OpNullCoales, Args: []*Node{x, y}}
 }
