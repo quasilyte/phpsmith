@@ -7,12 +7,12 @@ import (
 	"os/exec"
 )
 
-func RunPHP(ctx context.Context, filename string) ([]byte, error) {
+func RunPHP(ctx context.Context, dir string) ([]byte, error) {
 	var (
 		outBuffer bytes.Buffer
 		errBuffer bytes.Buffer
 	)
-	phpCmd := exec.CommandContext(ctx, "php", "-f", filename)
+	phpCmd := exec.CommandContext(ctx, "php", "-f", dir+"/main.php")
 	phpCmd.Stdout, phpCmd.Stderr = &outBuffer, &errBuffer
 
 	if err := phpCmd.Run(); err != nil {

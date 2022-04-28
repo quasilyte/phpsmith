@@ -21,19 +21,17 @@ func cmdGenerate(args []string) error {
 		`output dir`)
 	_ = fs.Parse(args)
 
-	_, err := generate(*flagOutputDir, *flagSeed)
-
-	return err
+	return generate(*flagOutputDir, *flagSeed)
 }
 
-func generate(dir string, randomSeed int64) ([]string, error) {
+func generate(dir string, randomSeed int64) error {
 	if randomSeed == 0 {
 		randomSeed = time.Now().Unix()
 	}
 	random := rand.New(rand.NewSource(randomSeed))
 
 	if err := os.MkdirAll(dir, 0o700); err != nil && !os.IsExist(err) {
-		return nil, err
+		return err
 	}
 
 	config := &irgen.Config{Rand: random}
@@ -42,27 +40,22 @@ func generate(dir string, randomSeed int64) ([]string, error) {
 		Rand: random,
 	}
 
-	var filenames []string
 	for _, f := range program.RuntimeFiles {
 		fullname := filepath.Join(dir, f.Name)
-		filenames = append(filenames, fullname)
-
 		if err := os.WriteFile(fullname, f.Contents, 0o664); err != nil {
-			return nil, fmt.Errorf("create %s file: %w", fullname, err)
+			return fmt.Errorf("create %s file: %w", fullname, err)
 		}
 	}
 
 	for _, f := range program.Files {
 		fullname := filepath.Join(dir, f.Name)
-		filenames = append(filenames, fullname)
-
 		fileContents := makeFileContents(f, printerConfig)
 		if err := os.WriteFile(fullname, fileContents, 0o664); err != nil {
-			return nil, fmt.Errorf("create %s file: %w", fullname, err)
+			return fmt.Errorf("create %s file: %w", fullname, err)
 		}
 	}
 
-	return filenames, nil
+	return nil
 }
 
 func makeFileContents(f *irgen.File, config *irprint.Config) []byte {

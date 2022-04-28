@@ -4,10 +4,13 @@ import (
 	"context"
 	"flag"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/sync/errgroup"
@@ -52,51 +55,46 @@ func cmdFuzz(args []string) error {
 		cancel()
 	}()
 
-	filesCh := make(chan string, 100)
+	dirCh := make(chan string, 100)
 	for i := 0; i < concurrency; i++ {
 		eg.Go(func() error {
-			return runner(ctx, filesCh, seed)
+			return runner(ctx, dirCh, seed)
 		})
 	}
 
+	randomizer := rand.New(rand.NewSource(time.Now().Unix()))
 out:
 	for {
+		newDir := dir + strconv.Itoa(randomizer.Int())
+		if err := generate(newDir, seed); err != nil {
+			log.Println("on generate: ", err)
+			continue
+		}
+
 		select {
+		case dirCh <- newDir:
 		case <-ctx.Done():
 			break out
-		default:
 		}
+	}
 
-		files, err := generate(dir, seed)
-		if err != nil {
-			return err
-		}
-
-		for _, file := range files {
-			select {
-			case filesCh <- file:
-			case <-ctx.Done():
-				break out
-			}
-		}
-
-		if err = eg.Wait(); err != nil {
-			log.Println("on errorGroup Execution: ", err)
-		}
+	if err := eg.Wait(); err != nil {
+		log.Println("on errorGroup Execution: ", err)
 	}
 
 	return nil
 }
 
-func runner(ctx context.Context, files <-chan string, seed int64) error {
+func runner(ctx context.Context, dirs <-chan string, seed int64) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case filename := <-files:
-			if err := fuzzingProcess(ctx, filename, seed); err != nil {
+		case dir := <-dirs:
+			if err := fuzzingProcess(ctx, dir, seed); err != nil {
 				log.Println("on fuzzingProcess:", err)
 			}
+			log.Println("dir processed:", dir)
 		}
 	}
 }
@@ -106,11 +104,11 @@ type ExecutorOutput struct {
 	Error  string
 }
 
-func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
+func fuzzingProcess(ctx context.Context, dir string, seed int64) error {
 	var results = make(map[int]ExecutorOutput, len(executors))
 	var errMsg string
 	for i, ex := range executors {
-		r, err := ex(ctx, filename)
+		r, err := ex(ctx, dir)
 
 		if err != nil {
 			errMsg = err.Error()
@@ -122,25 +120,11 @@ func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
 		}
 	}
 
-	checkedStack := make(map[int][]int)
-	for i, r := range results {
-	inner:
-		for ii, rr := range results {
-			if checks, ok := checkedStack[i]; ok {
-				for _, checkedRes := range checks {
-					if checkedRes == ii {
-						continue inner
-					}
-				}
-			}
-
-			if diff := cmp.Diff(r.Output, rr.Output); diff != "" {
-				checkedStack[i] = append(checkedStack[i], ii)
-				log.Println("-----------------------------")
-				log.Printf("out: %s\tseed: %d\tdiff: %s\tstdErr: %s\t \n", r.Output, seed, diff, r.Error)
-				log.Printf("out: %s\tseed: %d\tdiff: %s\tstdErr: %s\t \n", rr.Output, seed, diff, rr.Error)
-			}
-		}
+	if diff := cmp.Diff(results[0].Output, results[1].Output); diff != "" {
+		log.Println("-----------------------------")
+		log.Printf("diff: %s\t, seed: %d\t\n", diff, seed)
+		log.Printf("out: %s\tstdErr: %s\t\n", results[0].Output, results[0].Error)
+		log.Printf("out: %s\tstdErr: %s\t\n", results[1].Output, results[1].Error)
 	}
 
 	return nil
