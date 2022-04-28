@@ -159,10 +159,15 @@ func (p *printer) printNode(n *ir.Node) {
 	case ir.OpGreaterOrEqual:
 		p.printBinary(n, ">=")
 
-	case ir.OpPostInc, ir.OpPreInc:
-		p.printBinary(n, "++")
-	case ir.OpPostDec, ir.OpPreDec:
-		p.printBinary(n, "--")
+	case ir.OpPreInc:
+		p.printUnaryPrefix(n, "++")
+	case ir.OpPreDec:
+		p.printUnaryPrefix(n, "--")
+
+	case ir.OpPostInc:
+		p.printUnaryPostfix(n, "++")
+	case ir.OpPostDec:
+		p.printUnaryPostfix(n, "--")
 
 	case ir.OpNot:
 		p.printUnaryPrefix(n, "!")
@@ -211,6 +216,11 @@ func (p *printer) printNode(n *ir.Node) {
 func (p *printer) printUnaryPrefix(n *ir.Node, op string) {
 	p.w.WriteString(op)
 	p.printNode(n.Args[0])
+}
+
+func (p *printer) printUnaryPostfix(n *ir.Node, op string) {
+	p.printNode(n.Args[0])
+	p.w.WriteString(op)
 }
 
 func (p *printer) printBinary(n *ir.Node, op string) {
