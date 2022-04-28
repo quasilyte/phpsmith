@@ -123,7 +123,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 3, generate: binaryOpGenerator(ir.OpOr, g.boolValue)},
 		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 6, generate: g.boolVar, fallback: g.boolLit},
-		{freq: 6, generate: g.boolLit},
+		{freq: 3, generate: g.boolLit},
 	})
 
 	g.intChoices = makeChoicesList(g.intLit, []exprChoice{
@@ -140,7 +140,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 2, generate: g.intNegation},
 		{freq: 2, generate: g.intCast},
 		{freq: 4, generate: g.intCall},
-		{freq: 5, generate: g.intLit},
+		{freq: 4, generate: g.intLit},
 		{freq: 6, generate: g.intVar, fallback: g.intLit},
 	})
 
@@ -174,7 +174,7 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 		return g.PickScalarType()
 	}
 
-	switch g.rand.Intn(3 + depth*3) {
+	switch g.rand.Intn(6 + depth*3) {
 	case 0:
 		elemType := g.pickType(depth + 1)
 		return &ir.ArrayType{Elem: elemType}

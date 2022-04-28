@@ -43,6 +43,16 @@ const (
 	// 'if' '(' $Args[0] ')' $Args[1] 'else' $Args[2]
 	OpIfElse
 
+	// 'switch' '(' $Args[0] ')' '{' $Args[1:]... '}'
+	// Note: args are OpCase and OpDefaultCase
+	OpSwitch
+
+	// 'case' $Args[0]: $Args[1:]...
+	OpCase
+
+	// 'default: $Args[0:]...
+	OpDefaultCase
+
 	// 'while' '(' $Args[0] ')' $Args[1]
 	OpWhile
 
@@ -230,6 +240,8 @@ var statementOpsMap = [...]bool{
 	OpIf:         true,
 	OpIfElse:     true,
 	OpWhile:      true,
+	OpDoWhile:    true,
+	OpSwitch:     true,
 	OpBlock:      true,
 	OpReturn:     true,
 	OpReturnVoid: true,
@@ -237,7 +249,9 @@ var statementOpsMap = [...]bool{
 }
 
 var miscOpsMap = [...]bool{
-	OpInvalid: true,
+	OpInvalid:     true,
+	OpCase:        true,
+	OpDefaultCase: true,
 }
 
 func NewBreak(value int) *Node {

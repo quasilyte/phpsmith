@@ -23,6 +23,8 @@ type generator struct {
 
 	files []*File
 
+	stmtDepth int
+
 	varNameSeq int
 
 	currentBlock *ir.Node
@@ -229,32 +231,81 @@ func (g *generator) pushVarDecl(name string) {
 }
 
 func (g *generator) pushStatement() {
+	g.stmtDepth++
+	defer func() {
+		g.stmtDepth--
+	}()
 
-	switch randutil.IntRange(g.rand, 0, 8) {
-	case 0, 1, 2:
-		g.pushVarDecl(g.genVarname())
-	case 3:
+	switch randutil.IntRange(g.rand, 0, 9+(g.stmtDepth*2)) {
+	case 0:
 		if g.insideLoop {
 			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewBreak(0))
 		} else {
 			g.pushBlockStmt()
 		}
-	case 4:
+	case 1:
 		if g.insideLoop {
 			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewContinue(0))
 		} else {
 			g.pushIfStmt()
 		}
-	case 5:
+	case 2:
 		g.pushVarDump()
-	case 6, 7:
+	case 3, 4:
 		g.pushAssignStmt()
-	case 8:
-		g.pushLoop()
+	case 5:
+		g.pushLoopStmt()
+	case 6:
+		g.pushSwitchStmt()
+	default:
+		g.pushVarDecl(g.genVarname())
 	}
 }
 
-func (g *generator) pushLoop() {
+func (g *generator) pushSwitchStmt() {
+	tagType := g.expr.PickScalarType()
+	numCases := randutil.IntRange(g.rand, 0, 10)
+	hasDefault := randutil.Bool(g.rand)
+	prevCurrentBlock := g.currentBlock
+
+	g.scope.Enter()
+	defer g.scope.Leave()
+
+	tagExpr := g.expr.GenerateValueOfType(tagType)
+	switchNode := &ir.Node{Op: ir.OpSwitch, Args: []*ir.Node{tagExpr}}
+	for i := 0; i < numCases; i++ {
+		g.scope.Enter()
+		x := g.expr.GenerateValueOfType(tagType)
+		caseNode := &ir.Node{Op: ir.OpCase, Args: []*ir.Node{x}}
+		caseSize := randutil.IntRange(g.rand, 0, 2)
+		g.currentBlock = caseNode
+		for j := 0; j < caseSize; j++ {
+			g.pushStatement()
+		}
+		if randutil.IntRange(g.rand, 0, 8) != 0 {
+			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewBreak(0))
+		}
+		switchNode.Args = append(switchNode.Args, caseNode)
+
+		g.scope.Leave()
+	}
+	if hasDefault {
+		g.scope.Enter()
+		caseNode := &ir.Node{Op: ir.OpDefaultCase}
+		caseSize := randutil.IntRange(g.rand, 0, 2)
+		g.currentBlock = caseNode
+		for j := 0; j < caseSize; j++ {
+			g.pushStatement()
+		}
+		switchNode.Args = append(switchNode.Args, caseNode)
+		g.scope.Leave()
+	}
+
+	g.currentBlock = prevCurrentBlock
+	g.currentBlock.Args = append(g.currentBlock.Args, switchNode)
+}
+
+func (g *generator) pushLoopStmt() {
 	prevInLoop := g.insideLoop
 	prevCurrentBlock := g.currentBlock
 	g.insideLoop = true

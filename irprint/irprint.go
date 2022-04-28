@@ -123,22 +123,26 @@ func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
 	p.w.WriteByte('\n')
 }
 
+func (p *printer) printSeq(nodes []*ir.Node) {
+	for _, stmt := range nodes {
+		p.indent()
+		flags := p.printNode(stmt)
+		if flags.NeedSemicolon() {
+			p.w.WriteByte(';')
+		}
+		if flags.NeedNewline() {
+			p.w.WriteString("\n")
+		}
+	}
+}
+
 //nolint:gocyclo
 func (p *printer) printNode(n *ir.Node) printFlags {
 	switch n.Op {
 	case ir.OpBlock:
 		p.depth += 2
 		p.w.WriteString("{\n")
-		for _, stmt := range n.Args {
-			p.indent()
-			flags := p.printNode(stmt)
-			if flags.NeedSemicolon() {
-				p.w.WriteByte(';')
-			}
-			if flags.NeedNewline() {
-				p.w.WriteString("\n")
-			}
-		}
+		p.printSeq(n.Args)
 		p.depth -= 2
 		p.indent()
 		p.w.WriteString("}\n")
@@ -315,6 +319,32 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.w.WriteString(n.Type.String())
 		p.w.WriteByte(')')
 		p.printNode(n.Args[0])
+
+	case ir.OpSwitch:
+		p.w.WriteString("switch (")
+		p.printNode(n.Args[0])
+		p.w.WriteString(") {\n")
+		p.depth += 2
+		for _, c := range n.Args[1:] {
+			var body []*ir.Node
+			p.indent()
+			p.depth += 2
+			if c.Op == ir.OpCase {
+				p.w.WriteString("case ")
+				p.printNode(c.Args[0])
+				p.w.WriteString(":\n")
+				body = c.Args[1:]
+			} else {
+				body = c.Args
+				p.w.WriteString("default:\n")
+			}
+			p.printSeq(body)
+			p.depth -= 2
+		}
+		p.depth -= 2
+		p.indent()
+		p.w.WriteString("}\n")
+		return 0
 
 	case ir.OpWhile:
 		p.w.WriteString("while (")
