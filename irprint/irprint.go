@@ -87,7 +87,13 @@ func (p *printer) printRootNode(n ir.RootNode) {
 	case *ir.RootFuncDecl:
 		p.printFuncDecl(n)
 	case *ir.RootStmt:
-		p.printNode(n.X)
+		flags := p.printNode(n.X)
+		if flags.NeedSemicolon() {
+			p.w.WriteByte(';')
+		}
+		if flags.NeedNewline() {
+			p.w.WriteString("\n")
+		}
 	}
 }
 

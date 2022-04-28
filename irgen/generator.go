@@ -61,15 +61,41 @@ func newGenerator(config *Config) *generator {
 }
 
 func (g *generator) CreateProgram() *Program {
-	g.files = append(g.files, g.createFile("main.php"))
+	g.files = append(g.files, g.createMainFile())
 	return &Program{Files: g.files}
 }
 
-func (g *generator) createFile(name string) *File {
-	f := &File{Name: name}
-	for i := 0; i < 2; i++ {
-		f.Nodes = append(f.Nodes, g.createFunc("func"+strconv.Itoa(i)))
+func (g *generator) createMainFile() *File {
+	f := &File{Name: "main.php"}
+
+	funcs := make([]*ir.RootFuncDecl, randutil.IntRange(g.rand, 2, 4))
+	for i := range funcs {
+		funcs[i] = g.createFunc("func" + strconv.Itoa(i))
 	}
+
+	// Create a main func.
+	mainFunc := &ir.RootFuncDecl{
+		Type: &ir.FuncType{
+			Name:   "main",
+			Result: ir.VoidType,
+		},
+		Body: &ir.Node{Op: ir.OpBlock},
+	}
+	for _, fn := range funcs {
+		funcNode := ir.NewName(fn.Type.Name)
+		call := &ir.Node{Op: ir.OpCall, Args: []*ir.Node{funcNode}}
+		mainFunc.Body.Args = append(mainFunc.Body.Args, call)
+	}
+
+	for _, fn := range funcs {
+		f.Nodes = append(f.Nodes, fn)
+	}
+	f.Nodes = append(f.Nodes, mainFunc)
+
+	f.Nodes = append(f.Nodes, &ir.RootStmt{
+		X: ir.NewCall(ir.NewName("main")),
+	})
+
 	return f
 }
 
@@ -83,7 +109,12 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 	}
 
 	g.scope.Enter()
-	defer g.scope.Leave()
+	defer func() {
+		g.scope.Leave()
+		if len(g.scope.depths) != 0 {
+			panic("corrupted scope stack?")
+		}
+	}()
 
 	g.varNameSeq = 0
 	g.currentBlock = fn.Body
@@ -130,7 +161,7 @@ func (g *generator) pushStatement() {
 	case 4:
 		g.pushIfStmt()
 	case 5:
-		g.pushExprStmt()
+		g.pushVarDump()
 	case 6, 7:
 		g.pushAssignStmt()
 	}
@@ -168,9 +199,14 @@ func (g *generator) pushAssignStmt() {
 	g.currentBlock.Args = append(g.currentBlock.Args, assign)
 }
 
-func (g *generator) pushExprStmt() {
-	expr := g.expr.GenerateValueOfType(g.expr.PickType())
-	g.currentBlock.Args = append(g.currentBlock.Args, expr)
+func (g *generator) pushVarDump() {
+	typ := g.expr.PickType()
+	arg := g.expr.GenerateValueOfType(typ)
+	switch typ.(type) {
+	case *ir.ScalarType, *ir.ArrayType:
+		varDump := ir.NewCall(ir.NewName("var_dump"), arg)
+		g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+	}
 }
 
 func (g *generator) pushBlockStmt() {
@@ -190,6 +226,7 @@ func (g *generator) pushIfStmt() {
 
 	withoutBlock := randutil.IntRange(g.rand, 0, 1) == 0
 	oldBlock := g.currentBlock
+	g.scope.Enter()
 	if withoutBlock {
 		ifStmt := &ir.Node{Op: ir.OpIf, Args: []*ir.Node{cond}}
 		g.currentBlock = ifStmt
@@ -201,6 +238,7 @@ func (g *generator) pushIfStmt() {
 		g.pushStatement()
 		oldBlock.Args = append(oldBlock.Args, ir.NewIf(cond, newBlock))
 	}
+	g.scope.Leave()
 	g.currentBlock = oldBlock
 }
 
