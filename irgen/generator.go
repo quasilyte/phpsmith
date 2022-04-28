@@ -79,7 +79,7 @@ func (g *generator) genVarname() string {
 }
 
 func (g *generator) pushVarDecl(name string) {
-	typ := g.expr.PickScalarType()
+	typ := g.expr.PickType()
 	lhs := ir.NewVar(name, typ)
 	rhs := g.expr.GenerateValueOfType(typ)
 	assign := ir.NewAssign(lhs, rhs)

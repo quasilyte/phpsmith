@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/quasilyte/phpsmith/ir"
+	"github.com/quasilyte/phpsmith/randutil"
 )
 
 type exprGenerator struct {
@@ -108,6 +109,20 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	return g
 }
 
+func (g *exprGenerator) PickType() ir.Type {
+	switch g.rand.Intn(3) {
+	case 0:
+		return g.PickArrayType()
+	default:
+		return g.PickScalarType()
+	}
+}
+
+func (g *exprGenerator) PickArrayType() ir.Type {
+	elemType := g.PickType()
+	return &ir.ArrayType{Elem: elemType}
+}
+
 func (g *exprGenerator) PickScalarType() ir.Type {
 	return scalarTypes[g.rand.Intn(len(scalarTypes))]
 }
@@ -127,6 +142,9 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 		default:
 			panic(fmt.Sprintf("unexpected %s scalar type", typ.Kind))
 		}
+
+	case *ir.ArrayType:
+		return g.arrayValue(typ.Elem)
 
 	default:
 		panic(fmt.Sprintf("unexpected %T type", typ))
@@ -216,6 +234,15 @@ func (g *exprGenerator) boolVar() *ir.Node   { return g.varOfType(boolType) }
 func (g *exprGenerator) intVar() *ir.Node    { return g.varOfType(intType) }
 func (g *exprGenerator) floatVar() *ir.Node  { return g.varOfType(floatType) }
 func (g *exprGenerator) stringVar() *ir.Node { return g.varOfType(stringType) }
+
+func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
+	numElems := randutil.IntRange(g.rand, 1, 4)
+	elems := make([]*ir.Node, numElems)
+	for i := 0; i < numElems; i++ {
+		elems[i] = g.GenerateValueOfType(elemType)
+	}
+	return &ir.Node{Op: ir.OpArrayLit, Args: elems}
+}
 
 var boolLitValues = []*ir.Node{
 	ir.NewBoolLit(false),

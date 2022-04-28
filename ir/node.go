@@ -80,6 +80,9 @@ const (
 	// $Value.(string)
 	OpStringLit
 
+	// $Args holds array elements
+	OpArrayLit
+
 	// $Value.(string) contains a variable name
 	// $Type contains a variable type
 	OpVar
