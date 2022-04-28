@@ -53,6 +53,7 @@ type ArrayType struct {
 }
 
 type FuncType struct {
+	Name   string
 	Params []TypeField
 	Result Type
 }

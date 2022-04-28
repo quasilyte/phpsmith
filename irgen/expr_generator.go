@@ -89,6 +89,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.intValue)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.intValue)},
 		{freq: 6, generate: g.intVar, fallback: g.intLit},
+		{freq: 4, generate: g.intCall},
 		{freq: 5, generate: g.intLit},
 	})
 
@@ -234,6 +235,16 @@ func (g *exprGenerator) boolVar() *ir.Node   { return g.varOfType(ir.BoolType) }
 func (g *exprGenerator) intVar() *ir.Node    { return g.varOfType(ir.IntType) }
 func (g *exprGenerator) floatVar() *ir.Node  { return g.varOfType(ir.FloatType) }
 func (g *exprGenerator) stringVar() *ir.Node { return g.varOfType(ir.StringType) }
+
+func (g *exprGenerator) intCall() *ir.Node {
+	fn := g.symtab.intFuncs[g.rand.Intn(len(g.symtab.intFuncs))]
+	callArgs := make([]*ir.Node, len(fn.Params))
+	for i := range callArgs {
+		callArgs[i] = g.GenerateValueOfType(fn.Params[i].Type)
+	}
+	funcExpr := ir.NewName(fn.Name)
+	return ir.NewCall(funcExpr, callArgs...)
+}
 
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 	numElems := randutil.IntRange(g.rand, 1, 4)
