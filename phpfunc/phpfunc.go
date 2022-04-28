@@ -27,7 +27,8 @@ var funcList = []*ir.FuncType{
 		Params: []ir.TypeField{
 			{Name: "value", Type: ir.MixedType},
 		},
-		Result: ir.StringType,
+		Result:   ir.StringType,
+		NeedCast: true,
 	},
 	{
 		Name: "strtolower",
@@ -103,14 +104,14 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.StringType,
 	},
-	{
-		Name: "str_starts_with",
-		Params: []ir.TypeField{
-			{Name: "haystack", Type: ir.StringType},
-			{Name: "needle", Type: ir.StringType},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "str_starts_with",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "haystack", Type: ir.StringType},
+	// 		{Name: "needle", Type: ir.StringType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	// {
 	// 	Name: "vprintf",
 	// 	Params: []ir.TypeField{
@@ -181,14 +182,14 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.MixedType,
 	},
-	{
-		Name: "str_ends_with",
-		Params: []ir.TypeField{
-			{Name: "haystack", Type: ir.StringType},
-			{Name: "needle", Type: ir.StringType},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "str_ends_with",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "haystack", Type: ir.StringType},
+	// 		{Name: "needle", Type: ir.StringType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	{
 		Name: "is_writeable",
 		Params: []ir.TypeField{
@@ -543,13 +544,13 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.StringType,
 	},
-	{
-		Name: "floatval",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.FloatType,
-	},
+	// {
+	// 	Name: "floatval",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.FloatType,
+	// },
 	{
 		Name: "rawurldecode",
 		Params: []ir.TypeField{
@@ -557,27 +558,20 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.StringType,
 	},
-	{
-		Name: "intval",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.IntType,
-	},
-	{
-		Name: "strval",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.StringType,
-	},
-	{
-		Name: "boolval",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "intval",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.IntType,
+	// },
+	// {
+	// 	Name: "boolval",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	{
 		Name: "acos",
 		Params: []ir.TypeField{
@@ -675,62 +669,62 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.BoolType,
 	},
-	{
-		Name: "is_double",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
-	{
-		Name: "is_float",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
-	{
-		Name: "is_int",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
-	{
-		Name: "is_null",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
-	{
-		Name: "is_numeric",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
-	{
-		Name: "is_string",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
-	{
-		Name: "is_integer",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
-	{
-		Name: "is_long",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "is_double",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
+	// {
+	// 	Name: "is_float",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
+	// {
+	// 	Name: "is_int",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
+	// {
+	// 	Name: "is_null",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
+	// {
+	// 	Name: "is_numeric",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
+	// {
+	// 	Name: "is_string",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
+	// {
+	// 	Name: "is_integer",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
+	// {
+	// 	Name: "is_long",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	{
 		Name: "is_nan",
 		Params: []ir.TypeField{
@@ -738,13 +732,13 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.BoolType,
 	},
-	{
-		Name: "is_array",
-		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
-		},
-		Result: ir.BoolType,
-	},
+	// {
+	// 	Name: "is_array",
+	// 	Params: []ir.TypeField{
+	// 		{Name: "v", Type: ir.MixedType},
+	// 	},
+	// 	Result: ir.BoolType,
+	// },
 	{
 		Name: "is_infinite",
 		Params: []ir.TypeField{
@@ -860,7 +854,7 @@ var funcList = []*ir.FuncType{
 	{
 		Name: "array_key_exists",
 		Params: []ir.TypeField{
-			{Name: "v", Type: ir.MixedType},
+			{Name: "v", Type: ir.StringType},
 			{Name: "a", Type: &ir.ArrayType{Elem: ir.MixedType}},
 		},
 		Result: ir.BoolType,
@@ -869,7 +863,7 @@ var funcList = []*ir.FuncType{
 		Name: "implode",
 		Params: []ir.TypeField{
 			{Name: "s", Type: ir.StringType},
-			{Name: "v", Type: &ir.ArrayType{Elem: ir.MixedType}},
+			{Name: "v", Type: &ir.ArrayType{Elem: ir.StringType}},
 		},
 		Result: ir.StringType,
 	},
