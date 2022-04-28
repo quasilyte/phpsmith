@@ -151,7 +151,7 @@ func signalNotify(interrupt chan<- os.Signal) {
 }
 
 var exceptionPatterns = [][]byte{
-	[]byte("thrown exception"),
+	[]byte("uncaught exception"),
 	[]byte("fatal error"),
 }
 
