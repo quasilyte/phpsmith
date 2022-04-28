@@ -15,22 +15,11 @@ type RootStmt struct {
 type RootFuncDecl struct {
 	Name string
 
-	Params []ParamInfo
-
-	ResultType     Type
-	ResultTypeHint string
+	Type *FuncType
 
 	Tags []phpdoc.Tag
 
 	Body *Node
-}
-
-type ParamInfo struct {
-	Name string
-
-	Type Type
-
-	TypeHint string
 }
 
 func (n *RootStmt) rootNode()     {}

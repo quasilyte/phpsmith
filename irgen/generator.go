@@ -1,9 +1,10 @@
 package irgen
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/quasilyte/phpsmith/ir"
+	"github.com/quasilyte/phpsmith/phpfunc"
 )
 
 type generator struct {
@@ -23,6 +24,7 @@ type generator struct {
 
 func newGenerator(config *Config) *generator {
 	symtab := newSymbolTable()
+	phpfunc.Add(symtab.funcs)
 	s := newScope()
 	return &generator{
 		config: config,
@@ -40,8 +42,7 @@ func (g *generator) CreateProgram() *Program {
 func (g *generator) createFile(name string) *File {
 	f := &File{Name: name}
 	for i := 0; i < 2; i++ {
-		funcName := fmt.Sprintf("func%d", i)
-		f.Nodes = append(f.Nodes, g.createFunc(funcName))
+		f.Nodes = append(f.Nodes, g.createFunc("func"+strconv.Itoa(i)))
 	}
 	return f
 }
@@ -50,6 +51,7 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 	fn := &ir.RootFuncDecl{
 		Name: name,
 		Body: ir.NewBlock(),
+		Type: &ir.FuncType{Result: ir.VoidType},
 	}
 
 	g.scope.Enter()
@@ -73,7 +75,7 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 }
 
 func (g *generator) genVarname() string {
-	varname := fmt.Sprintf("v%d", g.varNameSeq)
+	varname := "v" + strconv.Itoa(g.varNameSeq)
 	g.varNameSeq++
 	return varname
 }

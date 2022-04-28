@@ -1,5 +1,19 @@
 package ir
 
+var (
+	VoidType   = &ScalarType{Kind: ScalarVoid}
+	BoolType   = &ScalarType{Kind: ScalarBool}
+	IntType    = &ScalarType{Kind: ScalarInt}
+	FloatType  = &ScalarType{Kind: ScalarFloat}
+	StringType = &ScalarType{Kind: ScalarString}
+	MixedType  = &ScalarType{Kind: ScalarMixed}
+)
+
+type TypeField struct {
+	Name string
+	Type Type
+}
+
 //go:generate stringer -type ScalarKind -trimprefix Scalar
 type ScalarKind int
 
@@ -10,6 +24,7 @@ const (
 	ScalarInt
 	ScalarFloat
 	ScalarString
+	ScalarMixed
 )
 
 type Type interface {
@@ -35,6 +50,11 @@ type NullableType struct {
 
 type ArrayType struct {
 	Elem Type
+}
+
+type FuncType struct {
+	Params []TypeField
+	Result Type
 }
 
 func (typ *ScalarType) String() string {
