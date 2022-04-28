@@ -208,7 +208,7 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpNotEqual3:
 		p.printBinary(n, "!==")
 	case ir.OpSpaceship:
-		p.printBinary(n, "<==>")
+		p.printBinary(n, "<=>")
 	case ir.OpAndWord:
 		p.printBinary(n, "and")
 	case ir.OpAnd:
