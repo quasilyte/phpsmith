@@ -15,19 +15,24 @@ import (
 
 func cmdGenerate(args []string) error {
 	fs := flag.NewFlagSet("phpsmith generate", flag.ExitOnError)
-	flagSeed := fs.Uint64("seed", 0,
+	flagSeed := fs.Int64("seed", 0,
 		`a seed to be used during the code generation, 0 means "randomized seed"`)
 	flagOutputDir := fs.String("o", "phpsmith_out",
 		`output dir`)
 	_ = fs.Parse(args)
 
-	randomSeed := int64(*flagSeed)
-	if randomSeed == 0 {
-		randomSeed = time.Now().Unix()
+	var seed int64
+	if *flagSeed == 0 {
+		seed = time.Now().Unix()
 	}
+
+	return generate(*flagOutputDir, seed)
+}
+
+func generate(dir string, randomSeed int64) error {
 	random := rand.New(rand.NewSource(randomSeed))
 
-	if err := os.MkdirAll(*flagOutputDir, 0o700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil && !os.IsExist(err) {
 		return err
 	}
 
@@ -36,14 +41,16 @@ func cmdGenerate(args []string) error {
 	printerConfig := &irprint.Config{
 		Rand: random,
 	}
+
 	for _, f := range program.RuntimeFiles {
-		fullname := filepath.Join(*flagOutputDir, f.Name)
+		fullname := filepath.Join(dir, f.Name)
 		if err := os.WriteFile(fullname, f.Contents, 0o664); err != nil {
 			return fmt.Errorf("create %s file: %w", fullname, err)
 		}
 	}
+
 	for _, f := range program.Files {
-		fullname := filepath.Join(*flagOutputDir, f.Name)
+		fullname := filepath.Join(dir, f.Name)
 		fileContents := makeFileContents(f, printerConfig)
 		if err := os.WriteFile(fullname, fileContents, 0o664); err != nil {
 			return fmt.Errorf("create %s file: %w", fullname, err)
