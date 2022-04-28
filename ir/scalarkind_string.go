@@ -14,11 +14,12 @@ func _() {
 	_ = x[ScalarInt-3]
 	_ = x[ScalarFloat-4]
 	_ = x[ScalarString-5]
+	_ = x[ScalarMixed-6]
 }
 
-const _ScalarKind_name = "UnknownVoidBoolIntFloatString"
+const _ScalarKind_name = "UnknownVoidBoolIntFloatStringMixed"
 
-var _ScalarKind_index = [...]uint8{0, 7, 11, 15, 18, 23, 29}
+var _ScalarKind_index = [...]uint8{0, 7, 11, 15, 18, 23, 29, 34}
 
 func (i ScalarKind) String() string {
 	if i < 0 || i >= ScalarKind(len(_ScalarKind_index)-1) {

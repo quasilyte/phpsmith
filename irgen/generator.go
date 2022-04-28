@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/quasilyte/phpsmith/ir"
+	"github.com/quasilyte/phpsmith/phpfunc"
 )
 
 type generator struct {
@@ -23,6 +24,7 @@ type generator struct {
 
 func newGenerator(config *Config) *generator {
 	symtab := newSymbolTable()
+	phpfunc.Add(symtab.funcs)
 	s := newScope()
 	return &generator{
 		config: config,
@@ -50,6 +52,7 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 	fn := &ir.RootFuncDecl{
 		Name: name,
 		Body: ir.NewBlock(),
+		Type: &ir.FuncType{Result: ir.VoidType},
 	}
 
 	g.scope.Enter()

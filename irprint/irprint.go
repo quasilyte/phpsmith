@@ -70,14 +70,11 @@ func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
 
 	p.w.WriteString("function " + decl.Name)
 	p.w.WriteByte('(')
-	for i, param := range decl.Params {
+	for i, param := range decl.Type.Params {
 		if i != 0 {
 			p.w.WriteString(", ")
 		}
-		if param.TypeHint != "" {
-			p.w.WriteString(param.TypeHint)
-			p.w.WriteByte(' ')
-		}
+		// TODO: print a type hint for some types, sometimes?
 		p.w.WriteString("$" + param.Name)
 	}
 	p.w.WriteString(") ")
