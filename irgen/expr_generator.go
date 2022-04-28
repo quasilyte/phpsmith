@@ -164,6 +164,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 5, generate: g.stringLit},
 		{freq: 5, generate: g.interpolatedString},
 		{freq: 6, generate: g.stringVar, fallback: g.stringLit},
+		{freq: 2, generate: g.stringIndex, fallback: g.interpolatedString},
 	})
 
 	return g
@@ -452,6 +453,28 @@ func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 		elems[i] = g.GenerateValueOfType(elemType)
 	}
 	return &ir.Node{Op: ir.OpArrayLit, Args: elems}
+}
+
+func (g *exprGenerator) lvalueOfType(typ ir.Type) *ir.Node {
+	if v := g.varOfType(typ); v != nil {
+		return v
+	}
+	return nil
+}
+
+func (g *exprGenerator) stringIndex() *ir.Node {
+	lvalue := g.lvalueOfType(ir.StringType)
+	if lvalue == nil {
+		return nil
+	}
+	s := g.maybeAddParens(lvalue)
+	var key *ir.Node
+	if randutil.IntRange(g.rand, 0, 10) > 2 {
+		key = g.intValue()
+	} else {
+		key = ir.NewIntLit(-1)
+	}
+	return ir.NewIndex(s, key)
 }
 
 var boolLitValues = []*ir.Node{
