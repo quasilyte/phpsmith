@@ -1,6 +1,7 @@
 package irgen
 
 import (
+	_ "embed"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -11,6 +12,9 @@ import (
 	"github.com/quasilyte/phpsmith/phpfunc"
 	"github.com/quasilyte/phpsmith/randutil"
 )
+
+//go:embed _php/fuzzlib.php
+var phpFuzzlib []byte
 
 type generator struct {
 	config *Config
@@ -50,6 +54,12 @@ func newGenerator(config *Config) *generator {
 
 func (g *generator) CreateProgram() *Program {
 	var mainFileRequires []*ir.RootRequire
+
+	mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: "fuzzlib.php"})
+	runtimeFiles := []*RuntimeFile{
+		{Name: "fuzzlib.php", Contents: phpFuzzlib},
+	}
+
 	numLibs := randutil.IntRange(g.rand, 1, 3)
 	for i := 0; i < numLibs; i++ {
 		filename := fmt.Sprintf("lib%d.php", i)
@@ -58,7 +68,10 @@ func (g *generator) CreateProgram() *Program {
 	}
 	mainFile := g.createMainFile(mainFileRequires)
 	g.files = append(g.files, mainFile)
-	return &Program{Files: g.files}
+	return &Program{
+		Files:        g.files,
+		RuntimeFiles: runtimeFiles,
+	}
 }
 
 func (g *generator) createLibFile(filename string) *File {

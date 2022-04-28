@@ -207,12 +207,12 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.printUnaryPrefix(n, "-")
 	case ir.OpUnaryPlus:
 		p.printUnaryPrefix(n, "+")
-	case ir.OpDiv:
-		p.printBinary(n, "/")
 	case ir.OpExp:
-		p.printBinary(n, "%")
+		p.printBinary(n, "**")
 	case ir.OpMod:
-		p.printBinary(n, "%")
+		p.printSimpleCall("_safe_mod", n.Args)
+	case ir.OpDiv:
+		p.printSimpleCall("_safe_div", n.Args)
 	case ir.OpMul:
 		p.printBinary(n, "*")
 	case ir.OpNotEqual2:
@@ -287,15 +287,7 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		}
 
 	case ir.OpCall:
-		p.printNode(n.Args[0])
-		p.w.WriteByte('(')
-		for i, arg := range n.Args[1:] {
-			if i != 0 {
-				p.w.WriteString(", ")
-			}
-			p.printNode(arg)
-		}
-		p.w.WriteByte(')')
+		p.printCall(n.Args[0], n.Args[1:])
 
 	case ir.OpCast:
 		p.w.WriteByte('(')
@@ -311,6 +303,22 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	}
 
 	return flagNeedNewline | flagNeedSemicolon
+}
+
+func (p *printer) printSimpleCall(name string, args []*ir.Node) {
+	p.printCall(ir.NewName(name), args)
+}
+
+func (p *printer) printCall(fn *ir.Node, args []*ir.Node) {
+	p.printNode(fn)
+	p.w.WriteByte('(')
+	for i, arg := range args {
+		if i != 0 {
+			p.w.WriteString(", ")
+		}
+		p.printNode(arg)
+	}
+	p.w.WriteByte(')')
 }
 
 func (p *printer) printUnaryPrefix(n *ir.Node, op string) {
