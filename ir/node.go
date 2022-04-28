@@ -91,6 +91,9 @@ const (
 	// $Value.(string)
 	OpStringLit
 
+	// $Args hold string part (OpStringLit with OpVar)
+	OpInterpolatedString
+
 	// $Args holds array elements
 	OpArrayLit
 
