@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"runtime"
@@ -52,31 +52,44 @@ func cmdFuzz(args []string) error {
 		cancel()
 	}()
 
-	for i := 0; i < *flagConcurrency; i++ {
-		eg.Go(func() error {
-			return runner(ctx, dir, seed)
-		})
-	}
-
-	return eg.Wait()
-}
-
-func runner(ctx context.Context, dir string, seed int64) error {
+out:
 	for {
-		files, err := generate(dir, seed) // TODO add mutex
+		select {
+		case <-ctx.Done():
+			break out
+		default:
+		}
+
+		files, err := generate(dir, seed)
 		if err != nil {
 			return err
 		}
 
-		for _, filename := range files {
-			if err = fuzzingProcess(ctx, filename); err != nil {
-				return err
-			}
+		for i := 0; i < *flagConcurrency; i++ {
+			eg.Go(func() error {
+				return runner(ctx, files, seed)
+			})
+		}
+
+		if err = eg.Wait(); err != nil {
+			log.Println("on errorGroup Execution: ", err)
 		}
 	}
+
+	return nil
 }
 
-func fuzzingProcess(ctx context.Context, filename string) error {
+func runner(ctx context.Context, files []string, seed int64) error {
+	for _, filename := range files {
+		if err := fuzzingProcess(ctx, filename, seed); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func fuzzingProcess(ctx context.Context, filename string, seed int64) error {
 	results := make([][]byte, 0, len(executors))
 	errs := make([]error, 0, len(executors))
 
@@ -87,10 +100,21 @@ func fuzzingProcess(ctx context.Context, filename string) error {
 		errs = append(errs, err)
 	}
 
-	for _, r := range results {
-		for _, rr := range results {
+	checkedStack := make(map[int][]int)
+	for i, r := range results {
+	inner:
+		for ii, rr := range results {
+			if checks, ok := checkedStack[i]; ok {
+				for _, checkedRes := range checks {
+					if checkedRes == ii {
+						continue inner
+					}
+				}
+			}
+
 			if diff := cmp.Diff(r, rr); diff != "" {
-				return fmt.Errorf("diff: %s, error: %s", diff, errs)
+				checkedStack[i] = append(checkedStack[i], ii)
+				log.Printf("out: %s\tseed: %d\tdiff: %s\tstdErr: %s\t\n", string(r), seed, diff, errs)
 			}
 		}
 	}
