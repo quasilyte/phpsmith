@@ -27,6 +27,8 @@ type generator struct {
 
 	currentBlock *ir.Node
 
+	insideLoop bool
+
 	scope *scope
 
 	symtab *symbolTable
@@ -227,18 +229,56 @@ func (g *generator) pushVarDecl(name string) {
 }
 
 func (g *generator) pushStatement() {
-	switch randutil.IntRange(g.rand, 0, 7) {
+
+	switch randutil.IntRange(g.rand, 0, 8) {
 	case 0, 1, 2:
 		g.pushVarDecl(g.genVarname())
 	case 3:
-		g.pushBlockStmt()
+		if g.insideLoop {
+			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewBreak(0))
+		} else {
+			g.pushBlockStmt()
+		}
 	case 4:
-		g.pushIfStmt()
+		if g.insideLoop {
+			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewContinue(0))
+		} else {
+			g.pushIfStmt()
+		}
 	case 5:
 		g.pushVarDump()
 	case 6, 7:
 		g.pushAssignStmt()
+	case 8:
+		g.pushLoop()
 	}
+}
+
+func (g *generator) pushLoop() {
+	prevInLoop := g.insideLoop
+	prevCurrentBlock := g.currentBlock
+	g.insideLoop = true
+	g.scope.Enter()
+
+	iterVarName := g.genVarname()
+	iterVar := ir.NewVar(iterVarName, ir.IntType)
+	iterVarAssign := ir.NewAssign(iterVar, ir.NewIntLit(0))
+	g.currentBlock.Args = append(g.currentBlock.Args, iterVarAssign)
+	loopCond := ir.NewLess(ir.NewPostInc(iterVar), ir.NewIntLit(int64(randutil.IntRange(g.rand, 1, 10))))
+	whileNode := &ir.Node{Op: ir.OpWhile}
+	whileNode.Args = append(whileNode.Args, loopCond)
+	g.currentBlock = whileNode
+	switch randutil.IntRange(g.rand, 0, 3) {
+	case 0, 1, 2:
+		g.pushBlockStmt()
+	case 3:
+		g.pushStatement()
+	}
+
+	g.scope.Leave()
+	g.insideLoop = prevInLoop
+	g.currentBlock = prevCurrentBlock
+	g.currentBlock.Args = append(g.currentBlock.Args, whileNode)
 }
 
 func (g *generator) pushAssignStmt() {

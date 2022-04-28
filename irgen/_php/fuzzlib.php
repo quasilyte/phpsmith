@@ -1,6 +1,38 @@
 <?php
 
 /**
+ * @param mixed $x
+ * @param mixed $y
+ */
+function float_eq2($x, $y) {
+    return $x == $y;
+}
+
+/**
+ * @param mixed $x
+ * @param mixed $y
+ */
+function float_eq3($x, $y) {
+    return $x === $y;
+}
+
+/**
+ * @param mixed $x
+ * @param mixed $y
+ */
+function float_neq2($x, $y) {
+    return $x != $y;
+}
+
+/**
+ * @param mixed $x
+ * @param mixed $y
+ */
+function float_neq3($x, $y) {
+    return $x !== $y;
+}
+
+/**
  * @kphp-template $x
  * @kphp-template $y
  */
