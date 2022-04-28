@@ -12,6 +12,7 @@ var (
 type TypeField struct {
 	Name string
 	Type Type
+	Init interface{}
 }
 
 //go:generate stringer -type ScalarKind -trimprefix Scalar
@@ -53,9 +54,10 @@ type ArrayType struct {
 }
 
 type FuncType struct {
-	Name   string
-	Params []TypeField
-	Result Type
+	Name       string
+	Params     []TypeField
+	MinArgsNum int
+	Result     Type
 }
 
 func (typ *ScalarType) String() string {

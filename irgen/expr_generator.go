@@ -88,9 +88,9 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 1, generate: g.intTernary},
 		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.intValue)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.intValue)},
-		{freq: 6, generate: g.intVar, fallback: g.intLit},
-		{freq: 4, generate: g.intCall},
+		{freq: 3, generate: g.intCall},
 		{freq: 5, generate: g.intLit},
+		{freq: 6, generate: g.intVar, fallback: g.intLit},
 	})
 
 	g.floatChoices = makeChoicesList([]exprChoice{
@@ -102,9 +102,10 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	})
 
 	g.stringChoices = makeChoicesList([]exprChoice{
+		{freq: 3, generate: g.stringCall},
 		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, g.stringValue)},
-		{freq: 6, generate: g.stringVar, fallback: g.stringLit},
 		{freq: 5, generate: g.stringLit},
+		{freq: 6, generate: g.stringVar, fallback: g.stringLit},
 	})
 
 	return g
@@ -236,14 +237,22 @@ func (g *exprGenerator) intVar() *ir.Node    { return g.varOfType(ir.IntType) }
 func (g *exprGenerator) floatVar() *ir.Node  { return g.varOfType(ir.FloatType) }
 func (g *exprGenerator) stringVar() *ir.Node { return g.varOfType(ir.StringType) }
 
-func (g *exprGenerator) intCall() *ir.Node {
-	fn := g.symtab.intFuncs[g.rand.Intn(len(g.symtab.intFuncs))]
-	callArgs := make([]*ir.Node, len(fn.Params))
+func (g *exprGenerator) callOfType(fn *ir.FuncType) *ir.Node {
+	numArgs := randutil.IntRange(g.rand, fn.MinArgsNum, len(fn.Params))
+	callArgs := make([]*ir.Node, numArgs)
 	for i := range callArgs {
 		callArgs[i] = g.GenerateValueOfType(fn.Params[i].Type)
 	}
 	funcExpr := ir.NewName(fn.Name)
 	return ir.NewCall(funcExpr, callArgs...)
+}
+
+func (g *exprGenerator) intCall() *ir.Node {
+	return g.callOfType(g.symtab.intFuncs[g.rand.Intn(len(g.symtab.intFuncs))])
+}
+
+func (g *exprGenerator) stringCall() *ir.Node {
+	return g.callOfType(g.symtab.stringFuncs[g.rand.Intn(len(g.symtab.stringFuncs))])
 }
 
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
