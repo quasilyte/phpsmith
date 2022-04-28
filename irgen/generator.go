@@ -1,14 +1,20 @@
 package irgen
 
 import (
+	_ "embed"
+	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/quasilyte/phpsmith/ir"
 	"github.com/quasilyte/phpsmith/phpdoc"
 	"github.com/quasilyte/phpsmith/phpfunc"
 	"github.com/quasilyte/phpsmith/randutil"
 )
+
+//go:embed _php/fuzzlib.php
+var phpFuzzlib []byte
 
 type generator struct {
 	config *Config
@@ -17,9 +23,13 @@ type generator struct {
 
 	files []*File
 
+	stmtDepth int
+
 	varNameSeq int
 
 	currentBlock *ir.Node
+
+	insideLoop bool
 
 	scope *scope
 
@@ -29,25 +39,10 @@ type generator struct {
 
 func newGenerator(config *Config) *generator {
 	symtab := newSymbolTable()
-	phpfunc.Add(symtab.funcs)
-	for _, fn := range symtab.funcs {
-		switch resultType := fn.Result.(type) {
-		case *ir.ScalarType:
-			switch resultType.Kind {
-			case ir.ScalarVoid:
-				symtab.voidFuncs = append(symtab.voidFuncs, fn)
-			case ir.ScalarBool:
-				symtab.boolFuncs = append(symtab.boolFuncs, fn)
-			case ir.ScalarInt:
-				symtab.intFuncs = append(symtab.intFuncs, fn)
-			case ir.ScalarFloat:
-				symtab.floatFuncs = append(symtab.floatFuncs, fn)
-			case ir.ScalarString:
-				symtab.stringFuncs = append(symtab.stringFuncs, fn)
-			}
-
-		case *ir.ArrayType:
-			symtab.arrayFuncs = append(symtab.arrayFuncs, fn)
+	{
+		coreFuncs := phpfunc.GetList()
+		for _, fn := range coreFuncs {
+			symtab.AddFunc(fn)
 		}
 	}
 
@@ -62,16 +57,55 @@ func newGenerator(config *Config) *generator {
 }
 
 func (g *generator) CreateProgram() *Program {
-	g.files = append(g.files, g.createMainFile())
-	return &Program{Files: g.files}
+	var mainFileRequires []*ir.RootRequire
+
+	mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: "fuzzlib.php"})
+	runtimeFiles := []*RuntimeFile{
+		{Name: "fuzzlib.php", Contents: phpFuzzlib},
+	}
+
+	numLibs := randutil.IntRange(g.rand, 3, 5)
+	for i := 0; i < numLibs; i++ {
+		filename := fmt.Sprintf("lib%d.php", i)
+		g.files = append(g.files, g.createLibFile(filename))
+		mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: filename})
+	}
+	mainFile := g.createMainFile(mainFileRequires)
+	g.files = append(g.files, mainFile)
+	return &Program{
+		Files:        g.files,
+		RuntimeFiles: runtimeFiles,
+	}
 }
 
-func (g *generator) createMainFile() *File {
-	f := &File{Name: "main.php"}
+func (g *generator) createLibFile(filename string) *File {
+	file := &File{Name: filename}
+
+	funcPrefix := strings.TrimSuffix(filename, ".php")
+
+	numLibFuncs := randutil.IntRange(g.rand, 2, 4)
+	for i := 0; i < numLibFuncs; i++ {
+		funcName := fmt.Sprintf("%s_func%d", funcPrefix, i)
+		fn := g.createFunc(funcName, true)
+		file.Nodes = append(file.Nodes, fn)
+		g.symtab.AddFunc(fn.Type)
+	}
+
+	return file
+}
+
+func (g *generator) createMainFile(requires []*ir.RootRequire) *File {
+	file := &File{
+		Name: "main.php",
+	}
+
+	for _, r := range requires {
+		file.Nodes = append(file.Nodes, r)
+	}
 
 	funcs := make([]*ir.RootFuncDecl, randutil.IntRange(g.rand, 2, 4))
 	for i := range funcs {
-		funcs[i] = g.createFunc("func" + strconv.Itoa(i))
+		funcs[i] = g.createFunc("func"+strconv.Itoa(i), false)
 	}
 
 	// Create a main func.
@@ -89,27 +123,50 @@ func (g *generator) createMainFile() *File {
 	}
 
 	for _, fn := range funcs {
-		f.Nodes = append(f.Nodes, fn)
+		file.Nodes = append(file.Nodes, fn)
 	}
-	f.Nodes = append(f.Nodes, mainFunc)
+	file.Nodes = append(file.Nodes, mainFunc)
 
-	f.Nodes = append(f.Nodes, &ir.RootStmt{
+	file.Nodes = append(file.Nodes, &ir.RootStmt{
 		X: ir.NewCall(ir.NewName("main")),
 	})
 
-	return f
+	return file
 }
 
-func (g *generator) createFunc(name string) *ir.RootFuncDecl {
+func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 	fn := &ir.RootFuncDecl{
 		Body: ir.NewBlock(),
-		Type: &ir.FuncType{
-			Name:   name,
-			Result: ir.VoidType,
-		},
 	}
 
+	if isLibFunc {
+		fn.Type = &ir.FuncType{
+			Result: g.expr.PickType(),
+		}
+		numParams := randutil.IntRange(g.rand, 0, 10)
+		for i := 0; i < numParams; i++ {
+			paramName := fmt.Sprintf("p%d", i)
+			param := ir.TypeField{Name: paramName, Type: g.expr.PickType()}
+			fn.Tags = append(fn.Tags, &phpdoc.ParamTag{
+				VarName: "$" + paramName,
+				Type:    param.Type.String(),
+			})
+			fn.Type.Params = append(fn.Type.Params, param)
+		}
+		fn.Type.MinArgsNum = len(fn.Type.Params)
+		fn.Tags = append(fn.Tags, &phpdoc.ReturnTag{Type: fn.Type.Result.String()})
+	} else {
+		fn.Type = &ir.FuncType{
+			Name:   name,
+			Result: ir.VoidType,
+		}
+	}
+	fn.Type.Name = name
+
 	g.scope.Enter()
+	for _, param := range fn.Type.Params {
+		g.scope.PushVar(param.Name, param.Type)
+	}
 	defer func() {
 		g.scope.Leave()
 		if len(g.scope.depths) != 0 {
@@ -120,19 +177,36 @@ func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 	g.varNameSeq = 0
 	g.currentBlock = fn.Body
 
-	blockVars := make([]string, randutil.IntRange(g.rand, 3, 7))
+	numBlockVars := 0
+	if isLibFunc {
+		numBlockVars = randutil.IntRange(g.rand, 0, 2)
+	} else {
+		numBlockVars = randutil.IntRange(g.rand, 3, 7)
+	}
+	blockVars := make([]string, numBlockVars)
 	for i := range blockVars {
 		blockVars[i] = g.genVarname()
 		g.pushVarDecl(blockVars[i])
 	}
-	numStatements := randutil.IntRange(g.rand, 3, 10)
+	numStatements := 0
+	if isLibFunc {
+		numStatements = randutil.IntRange(g.rand, 1, 3)
+	} else {
+		numStatements = randutil.IntRange(g.rand, 3, 10)
+	}
 	for i := 0; i < numStatements; i++ {
 		g.pushStatement()
 	}
-	for _, name := range blockVars {
-		v := g.scope.FindVarByName(name)
-		varDump := ir.NewCall(ir.NewName("var_dump"), ir.NewVar(name, v.typ))
-		g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+
+	if isLibFunc {
+		ret := ir.NewReturn(g.expr.GenerateValueOfType(fn.Type.Result))
+		g.currentBlock.Args = append(g.currentBlock.Args, ret)
+	} else {
+		for _, name := range blockVars {
+			v := g.scope.FindVarByName(name)
+			varDump := ir.NewCall(ir.NewName("var_dump"), ir.NewVar(name, v.typ))
+			g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+		}
 	}
 
 	return fn
@@ -157,18 +231,105 @@ func (g *generator) pushVarDecl(name string) {
 }
 
 func (g *generator) pushStatement() {
-	switch randutil.IntRange(g.rand, 0, 7) {
-	case 0, 1, 2:
-		g.pushVarDecl(g.genVarname())
-	case 3:
-		g.pushBlockStmt()
-	case 4:
-		g.pushIfStmt()
-	case 5:
+	g.stmtDepth++
+	defer func() {
+		g.stmtDepth--
+	}()
+
+	switch randutil.IntRange(g.rand, 0, 9+(g.stmtDepth*2)) {
+	case 0:
+		if g.insideLoop {
+			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewBreak(0))
+		} else {
+			g.pushBlockStmt()
+		}
+	case 1:
+		if g.insideLoop {
+			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewContinue(0))
+		} else {
+			g.pushIfStmt()
+		}
+	case 2:
 		g.pushVarDump()
-	case 6, 7:
+	case 3, 4:
 		g.pushAssignStmt()
+	case 5:
+		g.pushLoopStmt()
+	case 6:
+		g.pushSwitchStmt()
+	default:
+		g.pushVarDecl(g.genVarname())
 	}
+}
+
+func (g *generator) pushSwitchStmt() {
+	tagType := g.expr.PickScalarType()
+	numCases := randutil.IntRange(g.rand, 0, 10)
+	hasDefault := randutil.Bool(g.rand)
+	prevCurrentBlock := g.currentBlock
+
+	g.scope.Enter()
+	defer g.scope.Leave()
+
+	tagExpr := g.expr.GenerateValueOfType(tagType)
+	switchNode := &ir.Node{Op: ir.OpSwitch, Args: []*ir.Node{tagExpr}}
+	for i := 0; i < numCases; i++ {
+		g.scope.Enter()
+		x := g.expr.GenerateValueOfType(tagType)
+		caseNode := &ir.Node{Op: ir.OpCase, Args: []*ir.Node{x}}
+		caseSize := randutil.IntRange(g.rand, 0, 2)
+		g.currentBlock = caseNode
+		for j := 0; j < caseSize; j++ {
+			g.pushStatement()
+		}
+		if randutil.IntRange(g.rand, 0, 8) != 0 {
+			g.currentBlock.Args = append(g.currentBlock.Args, ir.NewBreak(0))
+		}
+		switchNode.Args = append(switchNode.Args, caseNode)
+
+		g.scope.Leave()
+	}
+	if hasDefault {
+		g.scope.Enter()
+		caseNode := &ir.Node{Op: ir.OpDefaultCase}
+		caseSize := randutil.IntRange(g.rand, 0, 2)
+		g.currentBlock = caseNode
+		for j := 0; j < caseSize; j++ {
+			g.pushStatement()
+		}
+		switchNode.Args = append(switchNode.Args, caseNode)
+		g.scope.Leave()
+	}
+
+	g.currentBlock = prevCurrentBlock
+	g.currentBlock.Args = append(g.currentBlock.Args, switchNode)
+}
+
+func (g *generator) pushLoopStmt() {
+	prevInLoop := g.insideLoop
+	prevCurrentBlock := g.currentBlock
+	g.insideLoop = true
+	g.scope.Enter()
+
+	iterVarName := g.genVarname()
+	iterVar := ir.NewVar(iterVarName, ir.IntType)
+	iterVarAssign := ir.NewAssign(iterVar, ir.NewIntLit(0))
+	g.currentBlock.Args = append(g.currentBlock.Args, iterVarAssign)
+	loopCond := ir.NewLess(ir.NewPostInc(iterVar), ir.NewIntLit(int64(randutil.IntRange(g.rand, 1, 10))))
+	whileNode := &ir.Node{Op: ir.OpWhile}
+	whileNode.Args = append(whileNode.Args, loopCond)
+	g.currentBlock = whileNode
+	switch randutil.IntRange(g.rand, 0, 3) {
+	case 0, 1, 2:
+		g.pushBlockStmt()
+	case 3:
+		g.pushStatement()
+	}
+
+	g.scope.Leave()
+	g.insideLoop = prevInLoop
+	g.currentBlock = prevCurrentBlock
+	g.currentBlock.Args = append(g.currentBlock.Args, whileNode)
 }
 
 func (g *generator) pushAssignStmt() {

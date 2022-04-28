@@ -11,7 +11,14 @@ type Config struct {
 }
 
 type Program struct {
-	Files []*File
+	Files        []*File
+	RuntimeFiles []*RuntimeFile
+}
+
+type RuntimeFile struct {
+	Name string
+
+	Contents []byte
 }
 
 type File struct {

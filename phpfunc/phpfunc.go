@@ -4,10 +4,8 @@ import (
 	"github.com/quasilyte/phpsmith/ir"
 )
 
-func Add(dst map[string]*ir.FuncType) {
-	for _, f := range funcList {
-		dst[f.Name] = f
-	}
+func GetList() []*ir.FuncType {
+	return funcList
 }
 
 func init() {

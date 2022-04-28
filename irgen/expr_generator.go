@@ -19,6 +19,8 @@ type exprGenerator struct {
 
 	symtab *symbolTable
 
+	exprDepth int
+
 	condChoices   exprChoiceList
 	boolChoices   exprChoiceList
 	intChoices    exprChoiceList
@@ -29,6 +31,7 @@ type exprGenerator struct {
 type exprChoiceList struct {
 	indexMap []uint16
 	options  []exprChoice
+	fallback func() *ir.Node
 }
 
 type exprChoice struct {
@@ -45,7 +48,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		rand:   config.Rand,
 	}
 
-	makeChoicesList := func(options []exprChoice) exprChoiceList {
+	makeChoicesList := func(fallback func() *ir.Node, options []exprChoice) exprChoiceList {
 		indexes := make([]uint16, 0, len(options)*4)
 		for i, o := range options {
 			for j := 0; j < o.freq; j++ {
@@ -55,6 +58,29 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		return exprChoiceList{
 			indexMap: indexes,
 			options:  options,
+			fallback: fallback,
+		}
+	}
+
+	cmpOpGenerator := func(op ir.Op) func() *ir.Node {
+		return func() *ir.Node {
+			typ := g.PickScalarType()
+			x := g.GenerateValueOfType(typ)
+			y := g.GenerateValueOfType(typ)
+			resultOp := op
+			if scalarType, ok := typ.(*ir.ScalarType); ok && scalarType.Kind == ir.ScalarFloat {
+				switch resultOp {
+				case ir.OpEqual2:
+					resultOp = ir.OpFloatEqual2
+				case ir.OpEqual3:
+					resultOp = ir.OpFloatEqual3
+				case ir.OpNotEqual2:
+					resultOp = ir.OpNotFloatEqual2
+				case ir.OpNotEqual3:
+					resultOp = ir.OpNotFloatEqual3
+				}
+			}
+			return &ir.Node{Op: resultOp, Args: []*ir.Node{g.maybeAddParens(x), g.maybeAddParens(y)}}
 		}
 	}
 
@@ -62,57 +88,73 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		return func() *ir.Node {
 			x := operandGenerator()
 			y := operandGenerator()
-			return &ir.Node{Op: op, Args: []*ir.Node{x, y}}
+			return &ir.Node{Op: op, Args: []*ir.Node{g.maybeAddParens(x), g.maybeAddParens(y)}}
 		}
 	}
 
 	unaryOpGenerator := func(op ir.Op, operandGenerator func() *ir.Node) func() *ir.Node {
 		return func() *ir.Node {
 			x := operandGenerator()
-			return &ir.Node{Op: op, Args: []*ir.Node{x}}
+			return &ir.Node{Op: op, Args: []*ir.Node{g.maybeAddParens(x)}}
 		}
 	}
 
-	g.condChoices = makeChoicesList([]exprChoice{
-		{freq: 3, generate: binaryOpGenerator(ir.OpAnd, g.boolValue)},
-		{freq: 3, generate: binaryOpGenerator(ir.OpOr, g.boolValue)},
+	withCast := func(generator func() *ir.Node, typ ir.Type) func() *ir.Node {
+		return func() *ir.Node {
+			arg := g.maybeAddParens(generator())
+			return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: typ}
+		}
+	}
+
+	g.condChoices = makeChoicesList(g.boolLit, []exprChoice{
+		{freq: 3, generate: cmpOpGenerator(ir.OpEqual2)},
+		{freq: 3, generate: cmpOpGenerator(ir.OpEqual3)},
+		{freq: 4, generate: binaryOpGenerator(ir.OpAnd, g.boolValue)},
+		{freq: 4, generate: binaryOpGenerator(ir.OpOr, g.boolValue)},
 		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 5, generate: g.boolVar, fallback: g.boolLit},
 		{freq: 1, generate: g.boolLit},
 	})
 
-	g.boolChoices = makeChoicesList([]exprChoice{
+	g.boolChoices = makeChoicesList(g.boolLit, []exprChoice{
+		{freq: 1, generate: cmpOpGenerator(ir.OpEqual2)},
+		{freq: 1, generate: cmpOpGenerator(ir.OpEqual3)},
+		{freq: 3, generate: binaryOpGenerator(ir.OpAnd, g.boolValue)},
+		{freq: 3, generate: binaryOpGenerator(ir.OpOr, g.boolValue)},
+		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 6, generate: g.boolVar, fallback: g.boolLit},
-		{freq: 4, generate: g.boolLit},
+		{freq: 3, generate: g.boolLit},
 	})
 
-	g.intChoices = makeChoicesList([]exprChoice{
+	g.intChoices = makeChoicesList(g.intLit, []exprChoice{
 		{freq: 1, generate: g.intTernary},
 		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.intValue)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.intValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpDiv, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpMul, g.intValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpMod, g.intValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpExp, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitAnd, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitOr, g.intValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpBitXor, g.intValue)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpExp, g.intValue), ir.IntType)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpDiv, g.intValue), ir.IntType)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMod, g.intValue), ir.IntType)},
 		{freq: 2, generate: g.intNegation},
 		{freq: 2, generate: g.intCast},
 		{freq: 4, generate: g.intCall},
-		{freq: 5, generate: g.intLit},
+		{freq: 4, generate: g.intLit},
 		{freq: 6, generate: g.intVar, fallback: g.intLit},
 	})
 
-	g.floatChoices = makeChoicesList([]exprChoice{
+	g.floatChoices = makeChoicesList(g.floatLit, []exprChoice{
 		{freq: 1, generate: g.floatTernary},
 		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.floatValue)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.floatValue)},
+		{freq: 1, generate: binaryOpGenerator(ir.OpDiv, g.floatValue)},
+		{freq: 1, generate: binaryOpGenerator(ir.OpMul, g.floatValue)},
 		{freq: 6, generate: g.floatVar, fallback: g.floatLit},
 		{freq: 5, generate: g.floatLit},
 	})
 
-	g.stringChoices = makeChoicesList([]exprChoice{
+	g.stringChoices = makeChoicesList(g.stringLit, []exprChoice{
 		{freq: 2, generate: g.stringCast},
 		{freq: 3, generate: g.stringCall},
 		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, g.stringValue)},
@@ -124,17 +166,22 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 }
 
 func (g *exprGenerator) PickType() ir.Type {
-	switch g.rand.Intn(3) {
+	return g.pickType(0)
+}
+
+func (g *exprGenerator) pickType(depth int) ir.Type {
+	if depth >= 5 {
+		return g.PickScalarType()
+	}
+
+	switch g.rand.Intn(6 + depth*3) {
 	case 0:
-		return g.PickArrayType()
+		elemType := g.pickType(depth + 1)
+		return &ir.ArrayType{Elem: elemType}
+
 	default:
 		return g.PickScalarType()
 	}
-}
-
-func (g *exprGenerator) PickArrayType() ir.Type {
-	elemType := g.PickType()
-	return &ir.ArrayType{Elem: elemType}
 }
 
 func (g *exprGenerator) PickScalarType() ir.Type {
@@ -168,6 +215,14 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 }
 
 func (g *exprGenerator) chooseExpr(list *exprChoiceList) *ir.Node {
+	if g.exprDepth > 10 {
+		return list.fallback()
+	}
+	g.exprDepth++
+	defer func() {
+		g.exprDepth--
+	}()
+
 	for {
 		probe := g.rand.Intn(len(list.indexMap))
 		option := list.options[list.indexMap[probe]]
@@ -256,7 +311,16 @@ func (g *exprGenerator) intLit() *ir.Node {
 }
 
 func (g *exprGenerator) floatLit() *ir.Node {
-	return floatLitValues[g.rand.Intn(len(floatLitValues))]
+	switch g.rand.Intn(8) {
+	case 0:
+		return ir.NewFloatLit(g.rand.Float64())
+	case 2, 3:
+		return ir.NewFloatLit(g.rand.Float64() * float64(g.rand.Intn(1000)))
+	case 4:
+		return ir.NewFloatLit(g.rand.Float64() * float64(g.rand.Intn(10000000)))
+	default:
+		return floatLitValues[g.rand.Intn(len(floatLitValues))]
+	}
 }
 
 func (g *exprGenerator) stringLit() *ir.Node {
@@ -264,7 +328,7 @@ func (g *exprGenerator) stringLit() *ir.Node {
 	count := randutil.IntRange(g.rand, 1, 6)
 	for i := 0; i < count; i++ {
 		ch := g.rand.Intn(unicode.MaxASCII)
-		if !unicode.IsPrint(rune(ch)) {
+		if !unicode.IsPrint(rune(ch)) || ch == '$' {
 			s.WriteString(stringLitValues[g.rand.Intn(len(stringLitValues))].Value.(string))
 		} else {
 			s.WriteByte(byte(ch))
@@ -305,28 +369,24 @@ func (g *exprGenerator) stringCall() *ir.Node {
 	return g.callOfType(g.symtab.stringFuncs[g.rand.Intn(len(g.symtab.stringFuncs))])
 }
 
-func (g *exprGenerator) intNegation() *ir.Node {
-	arg := g.intValue()
-	switch arg.Op {
-	case ir.OpIntLit:
-		if arg.Value.(int64) < 0 {
-			arg = ir.NewParens(arg)
-		}
-	case ir.OpNegation:
-		arg = ir.NewParens(arg)
+func (g *exprGenerator) maybeAddParens(n *ir.Node) *ir.Node {
+	if isSimpleNode(n) {
+		return n
 	}
-	return ir.NewNegation(arg)
+	return ir.NewParens(n)
 }
 
-func (g *exprGenerator) intCast() *ir.Node {
-	arg := g.mixedValue()
-	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: ir.IntType}
+func (g *exprGenerator) intNegation() *ir.Node {
+	return ir.NewNegation(g.maybeAddParens(g.intValue()))
 }
 
-func (g *exprGenerator) stringCast() *ir.Node {
-	arg := g.mixedValue()
-	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: ir.StringType}
+func (g *exprGenerator) castToType(typ ir.Type) *ir.Node {
+	arg := g.maybeAddParens(g.mixedValue())
+	return &ir.Node{Op: ir.OpCast, Args: []*ir.Node{arg}, Type: typ}
 }
+
+func (g *exprGenerator) intCast() *ir.Node    { return g.castToType(ir.IntType) }
+func (g *exprGenerator) stringCast() *ir.Node { return g.castToType(ir.StringType) }
 
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 	numElems := randutil.IntRange(g.rand, 1, 4)

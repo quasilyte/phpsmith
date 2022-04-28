@@ -39,17 +39,12 @@ func generate(dir string, seed int64) ([]string, error) {
 
 	config := &irgen.Config{Rand: random}
 	program := irgen.CreateProgram(config)
-	printerConfig := &irprint.Config{
-		Rand: random,
-	}
 
 	var filenames []string
-	for _, f := range program.Files {
+	for _, f := range program.RuntimeFiles {
 		fullname := filepath.Join(dir, f.Name)
 		filenames = append(filenames, fullname)
-
-		fileContents := makeFileContents(f, printerConfig)
-		if err := os.WriteFile(fullname, fileContents, 0o664); err != nil {
+		if err := os.WriteFile(fullname, f.Contents, 0o664); err != nil {
 			return nil, fmt.Errorf("create %s file: %w", fullname, err)
 		}
 	}
