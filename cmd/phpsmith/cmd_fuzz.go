@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 
+	"github.com/google/go-cmp/cmp"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator"
@@ -76,19 +78,23 @@ func runner(ctx context.Context, dir string, seed int64) error {
 
 func fuzzingProcess(ctx context.Context, filename string) error {
 	results := make([][]byte, 0, len(executors))
-	errors := make([]error, 0, len(executors))
+	errs := make([]error, 0, len(executors))
 
 	for _, ex := range executors {
 		r, err := ex(ctx, filename)
 
 		results = append(results, r)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
-	return compareResults(results, errors)
-}
+	for _, r := range results {
+		for _, rr := range results {
+			if diff := cmp.Diff(r, rr); diff != "" {
+				return fmt.Errorf("diff: %s, error: %s", diff, errs)
+			}
+		}
+	}
 
-func compareResults(res [][]byte, errors []error) error {
 	return nil
 }
 
