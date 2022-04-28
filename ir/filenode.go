@@ -13,8 +13,6 @@ type RootStmt struct {
 }
 
 type RootFuncDecl struct {
-	Name string
-
 	Type *FuncType
 
 	Tags []phpdoc.Tag

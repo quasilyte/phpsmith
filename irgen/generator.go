@@ -25,6 +25,27 @@ type generator struct {
 func newGenerator(config *Config) *generator {
 	symtab := newSymbolTable()
 	phpfunc.Add(symtab.funcs)
+	for _, fn := range symtab.funcs {
+		switch resultType := fn.Result.(type) {
+		case *ir.ScalarType:
+			switch resultType.Kind {
+			case ir.ScalarVoid:
+				symtab.voidFuncs = append(symtab.voidFuncs, fn)
+			case ir.ScalarBool:
+				symtab.boolFuncs = append(symtab.boolFuncs, fn)
+			case ir.ScalarInt:
+				symtab.intFuncs = append(symtab.intFuncs, fn)
+			case ir.ScalarFloat:
+				symtab.floatFuncs = append(symtab.floatFuncs, fn)
+			case ir.ScalarString:
+				symtab.stringFuncs = append(symtab.stringFuncs, fn)
+			}
+
+		case *ir.ArrayType:
+			symtab.arrayFuncs = append(symtab.arrayFuncs, fn)
+		}
+	}
+
 	s := newScope()
 	return &generator{
 		config: config,
@@ -49,9 +70,11 @@ func (g *generator) createFile(name string) *File {
 
 func (g *generator) createFunc(name string) *ir.RootFuncDecl {
 	fn := &ir.RootFuncDecl{
-		Name: name,
 		Body: ir.NewBlock(),
-		Type: &ir.FuncType{Result: ir.VoidType},
+		Type: &ir.FuncType{
+			Name:   name,
+			Result: ir.VoidType,
+		},
 	}
 
 	g.scope.Enter()
