@@ -10,9 +10,10 @@ var (
 )
 
 type TypeField struct {
-	Name string
-	Type Type
-	Init interface{}
+	Name   string
+	Type   Type
+	Strict bool
+	Init   interface{}
 }
 
 type ScalarKind int
