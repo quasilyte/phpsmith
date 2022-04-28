@@ -63,11 +63,17 @@ func _() {
 	_ = x[OpPostDec-52]
 	_ = x[OpPreDec-53]
 	_ = x[OpCast-54]
+	_ = x[OpBitAnd-55]
+	_ = x[OpBitOr-56]
+	_ = x[OpBitXor-57]
+	_ = x[OpBitNot-58]
+	_ = x[OpBitShiftLeft-59]
+	_ = x[OpBitShiftRight-60]
 }
 
-const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexNegationUnaryPlusConcatAddSubDivMulModExpAndAndWordOrOrWordXorWordTernaryCallLessLessOrEqualGreaterGreaterOrEqualEqual2Equal3NotEqual2NotEqual3SpaceshipPostIncPreIncPostDecPreDecCast"
+const _Op_name = "InvalidBadBreakContinueIfIfElseWhileDoWhileBlockReturnReturnVoidEchoParensAssignAssignModifyBoolLitIntLitFloatLitStringLitArrayLitVarNameNotPropIndexNegationUnaryPlusConcatAddSubDivMulModExpAndAndWordOrOrWordXorWordTernaryCallLessLessOrEqualGreaterGreaterOrEqualEqual2Equal3NotEqual2NotEqual3SpaceshipPostIncPreIncPostDecPreDecCastBitAndBitOrBitXorBitNotBitShiftLeftBitShiftRight"
 
-var _Op_index = [...]uint16{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 157, 166, 172, 175, 178, 181, 184, 187, 190, 193, 200, 202, 208, 215, 222, 226, 230, 241, 248, 262, 268, 274, 283, 292, 301, 308, 314, 321, 327, 331}
+var _Op_index = [...]uint16{0, 7, 10, 15, 23, 25, 31, 36, 43, 48, 54, 64, 68, 74, 80, 92, 99, 105, 113, 122, 130, 133, 137, 140, 144, 149, 157, 166, 172, 175, 178, 181, 184, 187, 190, 193, 200, 202, 208, 215, 222, 226, 230, 241, 248, 262, 268, 274, 283, 292, 301, 308, 314, 321, 327, 331, 337, 342, 348, 354, 366, 379}
 
 func (i Op) String() string {
 	if i < 0 || i >= Op(len(_Op_index)-1) {

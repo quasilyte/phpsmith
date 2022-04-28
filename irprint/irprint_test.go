@@ -23,6 +23,7 @@ func TestPrintNodePretty(t *testing.T) {
 		{ir.NewFloatLit(0), `0.0`},
 		{ir.NewFloatLit(-1.4), `-1.4`},
 		{ir.NewAssignModify(ir.OpAdd, ir.NewVar("x", intType), ir.NewVar("y", intType)), "$x += $y"},
+		{ir.NewAssignModify(ir.OpBitShiftRight, ir.NewVar("x", intType), ir.NewVar("y", intType)), "$x >>= $y"},
 		// TODO: more string tests when printer handles them correctly.
 		{ir.NewStringLit(""), `""`},
 		{ir.NewStringLit("123"), `"123"`},
