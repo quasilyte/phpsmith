@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/quasilyte/phpsmith/ir"
+	"github.com/quasilyte/phpsmith/phpdoc"
 	"github.com/quasilyte/phpsmith/phpfunc"
 	"github.com/quasilyte/phpsmith/randutil"
 )
@@ -148,6 +149,9 @@ func (g *generator) pushVarDecl(name string) {
 	lhs := ir.NewVar(name, typ)
 	rhs := g.expr.GenerateValueOfType(typ)
 	assign := ir.NewAssign(lhs, rhs)
+	if scalarType, ok := typ.(*ir.ScalarType); ok && scalarType.Kind == ir.ScalarBool {
+		assign.Value = &phpdoc.VarTag{VarName: "$" + name, Type: "bool"}
+	}
 	g.currentBlock.Args = append(g.currentBlock.Args, assign)
 	g.scope.PushVar(name, typ)
 }
