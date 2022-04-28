@@ -311,7 +311,7 @@ func (g *exprGenerator) intLit() *ir.Node {
 	case 2, 3:
 		return ir.NewIntLit(-int64(g.rand.Intn(0xffff)))
 	case 4:
-		return ir.NewIntLit(g.rand.Int63())
+		return ir.NewIntLit(int64(randutil.IntRange(g.rand, 100000, 19438420511)))
 	default:
 		return intLitValues[g.rand.Intn(len(intLitValues))]
 	}
@@ -440,6 +440,7 @@ var intLitValues = []*ir.Node{
 	ir.NewIntLit(-1),
 	ir.NewIntLit(0xff),
 	ir.NewIntLit(9284128),
+	ir.NewIntLit(128412288),
 	ir.NewIntLit(-9284120),
 	ir.NewIntLit(-0xff),
 }
