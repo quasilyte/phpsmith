@@ -210,6 +210,12 @@ func (p *printer) printNode(n *ir.Node) {
 			p.printNode(arg)
 		}
 		p.w.WriteByte(')')
+
+	case ir.OpCast:
+		p.w.WriteByte('(')
+		p.w.WriteString(n.Type.String())
+		p.w.WriteByte(')')
+		p.printNode(n.Args[0])
 	}
 }
 

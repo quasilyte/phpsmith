@@ -15,7 +15,6 @@ type TypeField struct {
 	Init interface{}
 }
 
-//go:generate stringer -type ScalarKind -trimprefix Scalar
 type ScalarKind int
 
 const (
@@ -27,6 +26,23 @@ const (
 	ScalarString
 	ScalarMixed
 )
+
+func (k ScalarKind) String() string {
+	switch k {
+	case ScalarVoid:
+		return "void"
+	case ScalarBool:
+		return "bool"
+	case ScalarInt:
+		return "int"
+	case ScalarFloat:
+		return "float"
+	case ScalarString:
+		return "string"
+	default:
+		return "?"
+	}
+}
 
 type Type interface {
 	String() string
