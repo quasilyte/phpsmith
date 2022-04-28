@@ -40,4 +40,13 @@ var funcList = []*ir.FuncType{
 		},
 		Result: ir.StringType,
 	},
+
+	{
+		Name: "implode",
+		Params: []ir.TypeField{
+			{Name: "separator", Type: ir.StringType},
+			{Name: "array", Type: &ir.ArrayType{Elem: ir.MixedType}},
+		},
+		Result: ir.StringType,
+	},
 }

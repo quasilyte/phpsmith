@@ -141,6 +141,8 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 			return g.floatValue()
 		case ir.ScalarString:
 			return g.stringValue()
+		case ir.ScalarMixed:
+			return g.mixedValue()
 		default:
 			panic(fmt.Sprintf("unexpected %s scalar type", typ.Kind))
 		}
@@ -189,6 +191,20 @@ func (g *exprGenerator) floatValue() *ir.Node {
 
 func (g *exprGenerator) stringValue() *ir.Node {
 	return g.chooseExpr(&g.stringChoices)
+}
+
+func (g *exprGenerator) mixedValue() *ir.Node {
+	switch randutil.IntRange(g.rand, 0, 3) {
+	case 0:
+		return g.boolValue()
+	case 1:
+		return g.intValue()
+	case 2:
+		return g.floatValue()
+	case 3:
+		return g.stringValue()
+	}
+	panic("unreachable")
 }
 
 func (g *exprGenerator) intTernary() *ir.Node {
@@ -285,6 +301,8 @@ var floatLitValues = []*ir.Node{
 
 var stringLitValues = []*ir.Node{
 	ir.NewStringLit(""),
+	ir.NewStringLit(","),
+	ir.NewStringLit(" "),
 	ir.NewStringLit("\x00"),
 	ir.NewStringLit("simple string"),
 	ir.NewStringLit("1\n2"),
