@@ -454,23 +454,3 @@ func NewBitShiftLeft(x, y *Node) *Node {
 func NewBitShiftRight(x, y *Node) *Node {
 	return &Node{Op: OpBitShiftRight, Args: []*Node{x, y}}
 }
-
-var modifyOpLit = map[Op]string{
-	OpAdd:           "+",
-	OpConcat:        ".",
-	OpSub:           "-",
-	OpDiv:           "/",
-	OpMul:           "*",
-	OpExp:           "**",
-	OpMod:           "%",
-	OpBitAnd:        "&",
-	OpBitOr:         "|",
-	OpBitXor:        "^",
-	OpBitNot:        "~",
-	OpBitShiftLeft:  "<<",
-	OpBitShiftRight: ">>",
-}
-
-func MapModifyOpLit(op Op) string {
-	return modifyOpLit[op]
-}
