@@ -68,7 +68,7 @@ func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
 		p.w.WriteString(" */\n")
 	}
 
-	p.w.WriteString("function " + decl.Name)
+	p.w.WriteString("function " + decl.Type.Name)
 	p.w.WriteByte('(')
 	for i, param := range decl.Type.Params {
 		if i != 0 {

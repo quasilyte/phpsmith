@@ -19,6 +19,7 @@ var funcList = []funcEntry{
 	{
 		name: "strlen",
 		typ: &ir.FuncType{
+			Name: "strlen",
 			Params: []ir.TypeField{
 				{Name: "string", Type: ir.StringType},
 			},
