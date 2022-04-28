@@ -122,7 +122,7 @@ func (g *generator) pushVarDecl(name string) {
 }
 
 func (g *generator) pushStatement() {
-	switch randutil.IntRange(g.rand, 0, 5) {
+	switch randutil.IntRange(g.rand, 0, 7) {
 	case 0, 1, 2:
 		g.pushVarDecl(g.genVarname())
 	case 3:
@@ -131,7 +131,41 @@ func (g *generator) pushStatement() {
 		g.pushIfStmt()
 	case 5:
 		g.pushExprStmt()
+	case 6, 7:
+		g.pushAssignStmt()
 	}
+}
+
+func (g *generator) pushAssignStmt() {
+	v := g.pickVar()
+	if v == nil {
+		g.pushVarDecl(g.genVarname())
+		return
+	}
+	var op ir.Op
+	if typ, ok := v.typ.(*ir.ScalarType); ok && randutil.Bool(g.rand) {
+		var opChoice []ir.Op
+		switch typ.Kind {
+		case ir.ScalarInt, ir.ScalarFloat:
+			opChoice = []ir.Op{ir.OpAdd, ir.OpSub}
+		case ir.ScalarString:
+			opChoice = []ir.Op{ir.OpConcat}
+		case ir.ScalarMixed:
+			opChoice = []ir.Op{ir.OpAdd, ir.OpSub, ir.OpConcat}
+		}
+		if len(opChoice) != 0 {
+			op = opChoice[g.rand.Intn(len(opChoice))]
+		}
+	}
+	var assign *ir.Node
+	lhs := ir.NewVar(v.name, v.typ)
+	rhs := g.expr.GenerateValueOfType(v.typ)
+	if op != ir.OpInvalid {
+		assign = ir.NewAssignModify(op, lhs, rhs)
+	} else {
+		assign = ir.NewAssign(lhs, rhs)
+	}
+	g.currentBlock.Args = append(g.currentBlock.Args, assign)
 }
 
 func (g *generator) pushExprStmt() {
@@ -168,4 +202,12 @@ func (g *generator) pushIfStmt() {
 		oldBlock.Args = append(oldBlock.Args, ir.NewIf(cond, newBlock))
 	}
 	g.currentBlock = oldBlock
+}
+
+func (g *generator) pickVar() *scopeVar {
+	blockVars := g.scope.CurrentBlockVars()
+	if len(blockVars) == 0 {
+		return nil
+	}
+	return &blockVars[g.rand.Intn(len(blockVars))]
 }
