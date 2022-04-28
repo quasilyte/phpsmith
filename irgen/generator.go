@@ -122,14 +122,21 @@ func (g *generator) pushVarDecl(name string) {
 }
 
 func (g *generator) pushStatement() {
-	switch randutil.IntRange(g.rand, 0, 4) {
+	switch randutil.IntRange(g.rand, 0, 5) {
 	case 0, 1, 2:
 		g.pushVarDecl(g.genVarname())
 	case 3:
 		g.pushBlockStmt()
 	case 4:
 		g.pushIfStmt()
+	case 5:
+		g.pushExprStmt()
 	}
+}
+
+func (g *generator) pushExprStmt() {
+	expr := g.expr.GenerateValueOfType(g.expr.PickType())
+	g.currentBlock.Args = append(g.currentBlock.Args, expr)
 }
 
 func (g *generator) pushBlockStmt() {
