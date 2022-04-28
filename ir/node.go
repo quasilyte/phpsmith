@@ -65,6 +65,7 @@ const (
 	OpParens
 
 	// $Args[0] '=' $Args[1]
+	// $Value.(*phpdoc.VarTag) may contain a type specifier
 	OpAssign
 
 	// $Args[0] <op>'=' $Args[1]

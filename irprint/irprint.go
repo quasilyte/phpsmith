@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/quasilyte/phpsmith/ir"
+	"github.com/quasilyte/phpsmith/phpdoc"
 )
 
 // TODO:
@@ -171,6 +172,9 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.w.WriteString(n.Value.(string))
 
 	case ir.OpAssign:
+		if varTag, ok := n.Value.(*phpdoc.VarTag); ok {
+			p.w.WriteString("/** @var " + varTag.Value() + " */ ")
+		}
 		p.printBinary(n, "=")
 
 	case ir.OpAssignModify:
