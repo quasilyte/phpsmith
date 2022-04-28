@@ -16,9 +16,9 @@ func RunKPHP(ctx context.Context, dir string) ([]byte, error) {
 		errBuffer bytes.Buffer
 	)
 
+	binaryName := "./" + dir + "/" + dir
 	mu.Lock()
 	defer mu.Unlock()
-	binaryName := "./kphp_out/" + dir
 	compileCmd := exec.CommandContext(ctx, "kphp", "--mode", "cli", "-o", binaryName, dir+"/main.php")
 	compileCmd.Stdout, compileCmd.Stderr = &outBuffer, &errBuffer
 

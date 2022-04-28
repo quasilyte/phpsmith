@@ -44,6 +44,10 @@ func cmdFuzz(args []string) error {
 		concurrency = runtime.NumCPU() / 2
 	}
 
+	if seed == 0 {
+		seed = time.Now().Unix()
+	}
+
 	interrupt := make(chan os.Signal, 1)
 	signalNotify(interrupt)
 
@@ -121,10 +125,20 @@ func fuzzingProcess(ctx context.Context, dir string, seed int64) error {
 	}
 
 	if diff := cmp.Diff(results[0].Output, results[1].Output); diff != "" {
-		log.Println("-----------------------------")
-		log.Printf("diff: %s\t, seed: %d\t\n", diff, seed)
-		log.Printf("out: %s\tstdErr: %s\t\n", results[0].Output, results[0].Error)
-		log.Printf("out: %s\tstdErr: %s\t\n", results[1].Output, results[1].Error)
+		l, err := os.OpenFile(dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
+		if err != nil {
+			log.Println("-----------------------------")
+			log.Printf("diff: %s\t, seed: %d\t\n", diff, seed)
+			log.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
+			log.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
+		} else {
+			defer l.Close()
+
+			logger := log.New(l, "", 0)
+			logger.Printf("diff: %s\t, seed: %d\t\n", diff, seed)
+			logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
+			logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
+		}
 	}
 
 	return nil

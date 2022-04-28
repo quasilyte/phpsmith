@@ -21,13 +21,15 @@ func cmdGenerate(args []string) error {
 		`output dir`)
 	_ = fs.Parse(args)
 
-	return generate(*flagOutputDir, *flagSeed)
+	var seed int64
+	if *flagSeed == 0 {
+		seed = time.Now().Unix()
+	}
+
+	return generate(*flagOutputDir, seed)
 }
 
 func generate(dir string, randomSeed int64) error {
-	if randomSeed == 0 {
-		randomSeed = time.Now().Unix()
-	}
 	random := rand.New(rand.NewSource(randomSeed))
 
 	if err := os.MkdirAll(dir, 0o700); err != nil && !os.IsExist(err) {
