@@ -146,9 +146,9 @@ func (p *printer) printNode(n *ir.Node) {
 	case ir.OpOr:
 		p.printBinary(n, "||")
 
-	case ir.OpEqual:
+	case ir.OpEqual2:
 		p.printBinary(n, "==")
-	case ir.OpEqualStrict:
+	case ir.OpEqual3:
 		p.printBinary(n, "===")
 	case ir.OpLess:
 		p.printBinary(n, "<")

@@ -140,10 +140,10 @@ const (
 	OpGreaterOrEqual
 
 	// $Args[0] '==' $Args[1]
-	OpEqual
+	OpEqual2
 
 	// $Args[0] '===' $Args[1]
-	OpEqualStrict
+	OpEqual3
 
 	// $Args[0] '++'
 	OpPostInc
@@ -310,11 +310,11 @@ func NewGreaterOrEqual(x, y *Node) *Node {
 }
 
 func NewEqual(x, y *Node) *Node {
-	return &Node{Op: OpEqual, Args: []*Node{x, y}}
+	return &Node{Op: OpEqual2, Args: []*Node{x, y}}
 }
 
 func NewEqualStrict(x, y *Node) *Node {
-	return &Node{Op: OpEqualStrict, Args: []*Node{x, y}}
+	return &Node{Op: OpEqual3, Args: []*Node{x, y}}
 }
 
 func NewPostInc(x *Node) *Node {
