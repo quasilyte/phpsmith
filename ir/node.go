@@ -188,6 +188,24 @@ const (
 
 	// ($Type)$Args[0]
 	OpCast
+
+	// $Args[0] & $Args[1]
+	OpBitAnd
+
+	// $Args[0] | $Args[1]
+	OpBitOr
+
+	// $Args[0] ^ $Args[1]
+	OpBitXor
+
+	// ~ $Args[0]
+	OpBitNot
+
+	// $Args[0] << $Args[1]
+	OpBitShiftLeft
+
+	// $Args[0] >> $Args[1]
+	OpBitShiftRight
 )
 
 var statementOpsMap = [...]bool{
@@ -413,16 +431,26 @@ func NewUnaryPlus(x *Node) *Node {
 	return &Node{Op: OpUnaryPlus, Args: []*Node{x}}
 }
 
-var opLit = map[Op]string{
-	OpAdd:    "+",
-	OpConcat: ".",
-	OpSub:    "-",
-	OpDiv:    "/",
-	OpMul:    "*",
-	OpExp:    "**",
-	OpMod:    "%",
+func NewBitAnd(x, y *Node) *Node {
+	return &Node{Op: OpBitAnd, Args: []*Node{x, y}}
 }
 
-func MapOpLit(op Op) string {
-	return opLit[op]
+func NewBitOr(x, y *Node) *Node {
+	return &Node{Op: OpBitOr, Args: []*Node{x, y}}
+}
+
+func NewBitXor(x, y *Node) *Node {
+	return &Node{Op: OpBitXor, Args: []*Node{x, y}}
+}
+
+func NewBitNot(x *Node) *Node {
+	return &Node{Op: OpBitNot, Args: []*Node{x}}
+}
+
+func NewBitShiftLeft(x, y *Node) *Node {
+	return &Node{Op: OpBitShiftLeft, Args: []*Node{x, y}}
+}
+
+func NewBitShiftRight(x, y *Node) *Node {
+	return &Node{Op: OpBitShiftRight, Args: []*Node{x, y}}
 }

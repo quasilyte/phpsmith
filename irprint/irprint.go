@@ -20,6 +20,22 @@ type Config struct {
 	Rand *rand.Rand
 }
 
+var modifyOpLit = map[ir.Op]string{
+	ir.OpAdd:           "+",
+	ir.OpConcat:        ".",
+	ir.OpSub:           "-",
+	ir.OpDiv:           "/",
+	ir.OpMul:           "*",
+	ir.OpExp:           "**",
+	ir.OpMod:           "%",
+	ir.OpBitAnd:        "&",
+	ir.OpBitOr:         "|",
+	ir.OpBitXor:        "^",
+	ir.OpBitNot:        "~",
+	ir.OpBitShiftLeft:  "<<",
+	ir.OpBitShiftRight: ">>",
+}
+
 func FprintRootNode(w io.Writer, n ir.RootNode, config *Config) {
 	p := &printer{
 		config: config,
@@ -151,7 +167,7 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.printBinary(n, "=")
 
 	case ir.OpAssignModify:
-		p.printBinary(n, ir.MapOpLit(n.Value.(ir.Op))+"=")
+		p.printBinary(n, modifyOpLit[n.Value.(ir.Op)]+"=")
 
 	case ir.OpAdd:
 		p.printBinary(n, "+")
