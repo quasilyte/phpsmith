@@ -21,8 +21,8 @@ func cmdGenerate(args []string) error {
 		`output dir`)
 	_ = fs.Parse(args)
 
-	var seed int64
-	if *flagSeed == 0 {
+	seed := *flagSeed
+	if seed == 0 {
 		seed = time.Now().Unix()
 	}
 
