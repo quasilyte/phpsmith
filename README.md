@@ -4,6 +4,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/quasilyte/phpsmith)](https://goreportcard.com/report/github.com/quasilyte/phpsmith)
 [![Go Reference](https://pkg.go.dev/badge/github.com/quasilyte/phpsmith.svg)](https://pkg.go.dev/github.com/quasilyte/phpsmith)
 
+![logo][docs/logo_small.png]
+
 `phpsmith` creates random PHP and KPHP programs to test their compilers and runtimes.
 
 It can create both valid (but very contrived) and invalid programs.
