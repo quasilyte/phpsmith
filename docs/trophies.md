@@ -16,6 +16,13 @@ $v3 = ucwords('204c');
 var_dump($v3);
 ```
 
+3. `~` is escaped in rawurlencode
+
+```php
+$v1 = "~";
+var_dump(rawurlencode($v1));
+```
+
 ### Can't compile valid programs
 
 1. False-typed value `$x` can't be used inside `if ($x)`.
