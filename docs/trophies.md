@@ -1,5 +1,19 @@
 ## KPHP issues
 
+### Critical error
+
+1. Segfault in `modulo` with invalid args at run time
+
+```php
+function modxy($x, $y) {
+  do {} while (false); // prevent inlining and const folding
+  return $x % $y;
+}
+
+$v8 = modxy(-9223372036854775808, -1);
+var_dump($v8);
+```
+
 ### Different results from PHP
 
 1. Overflowing numeric string conversions generate different values
@@ -28,8 +42,6 @@ var_dump(rawurlencode($v1));
 1. False-typed value `$x` can't be used inside `if ($x)`.
 
 ```php
-<?php
-
 function func3() {
   $v0 = false;
   if ($v0) {
@@ -43,8 +55,6 @@ func3();
 2. Concatenation breaks in `case` if it's after `continue` in a loop
 
 ```php
-<?php
-
 function func0() {
   $v2 = 'abc';
   $v4 = 0;
