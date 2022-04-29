@@ -28,7 +28,7 @@ var executors = []executor{
 
 func cmdFuzz(args []string) error {
 	fs := flag.NewFlagSet("phpsmith fuzz", flag.ExitOnError)
-	flagConcurrency := fs.Int("flagConcurrency", 1,
+	flagConcurrency := fs.Int("concurrency", 1,
 		"Number of concurrent runners. Defaults to the half number of available CPU cores.")
 	flagOutputDir := fs.String("o", "phpsmith_out",
 		`output dir`)
