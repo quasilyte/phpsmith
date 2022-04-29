@@ -90,10 +90,16 @@ func runner(ctx context.Context, dirCh <-chan dirAndSeed) error {
 		case <-ctx.Done():
 			return nil
 		case ds := <-dirCh:
-			if err := fuzzingProcess(ctx, ds); err != nil {
-				log.Println("on fuzzingProcess:", err)
+			diffFound := fuzzingProcess(ctx, ds)
+			suffix := ""
+			if diffFound {
+				suffix = "(found diff)"
+			} else {
+				if err := os.RemoveAll(ds.Dir); err != nil {
+					return err
+				}
 			}
-			log.Println("dir processed:", ds.Dir, ds.Seed)
+			log.Println("dir processed:", ds.Dir, suffix)
 		}
 	}
 }
@@ -108,7 +114,7 @@ type dirAndSeed struct {
 	Seed int64
 }
 
-func fuzzingProcess(ctx context.Context, ds dirAndSeed) error {
+func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 	var results = make(map[int]executorOutput, len(executors))
 	for i, ex := range executors {
 		var errMsg string
@@ -125,7 +131,8 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) error {
 		}
 	}
 
-	if diff := cmp.Diff(results[0].Output, results[1].Output); diff != "" {
+	diff := cmp.Diff(results[0].Output, results[1].Output)
+	if diff != "" {
 		l, err := os.OpenFile("./"+ds.Dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
 		if err != nil {
 			log.Println("-----------------------------")
@@ -141,8 +148,7 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) error {
 			logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
 		}
 	}
-
-	return nil
+	return diff != ""
 }
 
 func signalNotify(interrupt chan<- os.Signal) {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"sync"
 )
@@ -50,5 +51,5 @@ func RunKPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
 		return nil, fmt.Errorf("on run kphp binary: stdOut: %s, stdErr: %s", outBuffer.String(), errBuffer.String())
 	}
 
-	return outBuffer.Bytes(), nil
+	return outBuffer.Bytes(), os.Remove(binaryName)
 }

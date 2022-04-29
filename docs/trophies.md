@@ -1,5 +1,21 @@
 ## KPHP issues
 
+### Different results from PHP
+
+1. Overflowing numeric string conversions generate different values
+
+```php
+$result = (int)decbin(-1);
+var_dump($result);
+```
+
+2. Mismatching results for `ucwords`
+
+```php
+$v3 = ucwords('204c');
+var_dump($v3);
+```
+
 ### Can't compile valid programs
 
 1. False-typed value `$x` can't be used inside `if ($x)`.
