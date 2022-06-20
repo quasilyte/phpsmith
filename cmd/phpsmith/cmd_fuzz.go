@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -28,7 +29,7 @@ var executors = []executor{
 
 func cmdFuzz(args []string) error {
 	fs := flag.NewFlagSet("phpsmith fuzz", flag.ExitOnError)
-	flagConcurrency := fs.Int("concurrency", 1,
+	flagConcurrency := fs.Int("concurrency", 0,
 		"Number of concurrent runners. Defaults to the half number of available CPU cores.")
 	flagOutputDir := fs.String("o", "phpsmith_out",
 		`output dir`)
@@ -38,8 +39,11 @@ func cmdFuzz(args []string) error {
 	concurrency := *flagConcurrency
 	dir := *flagOutputDir
 
-	if concurrency == 1 && runtime.NumCPU()/2 > 1 {
-		concurrency = runtime.NumCPU() / 2
+	if concurrency == 0 {
+		concurrency = 1
+		if runtime.NumCPU()/2 > 1 {
+			concurrency = runtime.NumCPU() / 2
+		}
 	}
 
 	interrupt := make(chan os.Signal, 1)
@@ -78,7 +82,7 @@ out:
 	}
 
 	if err := eg.Wait(); err != nil {
-		log.Println("on errorGroup Execution: ", err)
+		return fmt.Errorf("on errorGroup Execution: %w", err)
 	}
 
 	return nil
