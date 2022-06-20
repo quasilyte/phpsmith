@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -120,18 +122,41 @@ type dirAndSeed struct {
 
 func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 	var results = make(map[int]executorOutput, len(executors))
+	var wg sync.WaitGroup
+
 	for i, ex := range executors {
-		var errMsg string
-		r, err := ex(ctx, ds.Dir, ds.Seed)
+		var (
+			err   error
+			out   []byte
+			errCh = make(chan error)
+		)
 
-		if err != nil {
-			errMsg = err.Error()
-		}
+		wg.Add(1)
 
-		grepExceptions(r, ds.Seed)
+		func() { // anon func need for close context
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			go func() {
+				defer wg.Done()
+				out, err = ex(ctx, ds.Dir, ds.Seed)
+				errCh <- err
+			}()
+
+			select {
+			case err = <-errCh:
+			case <-time.After(time.Minute):
+				err = errors.New("too long execution")
+				cancel()
+			}
+		}()
+
+		wg.Wait()
+
+		grepExceptions(out, ds.Seed)
 		results[i] = executorOutput{
-			Output: string(r),
-			Error:  errMsg,
+			Output: string(out),
+			Error:  err.Error(),
 		}
 	}
 

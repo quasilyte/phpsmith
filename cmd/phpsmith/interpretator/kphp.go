@@ -37,6 +37,7 @@ func RunKPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
 	}(); err != nil {
 		return nil, fmt.Errorf("on compile kphp: stdOut: %s, stdErr: %s", outBuffer.String(), errBuffer.String())
 	}
+	defer os.Remove(binaryName)
 
 	outBuffer.Reset()
 	errBuffer.Reset()
@@ -51,5 +52,5 @@ func RunKPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
 		return nil, fmt.Errorf("on run kphp binary: stdOut: %s, stdErr: %s", outBuffer.String(), errBuffer.String())
 	}
 
-	return outBuffer.Bytes(), os.Remove(binaryName)
+	return outBuffer.Bytes(), nil
 }
