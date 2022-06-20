@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -24,9 +23,9 @@ import (
 
 type executor func(ctx context.Context, filename string, seed int64) ([]byte, error)
 
-var executors = []executor{
-	interpretator.RunPHP,
-	interpretator.RunKPHP,
+var executors = map[string]executor{
+	"php":  interpretator.RunPHP,
+	"kphp": interpretator.RunKPHP,
 }
 
 func cmdFuzz(args []string) error {
@@ -121,10 +120,12 @@ type dirAndSeed struct {
 }
 
 func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
-	var results = make(map[int]executorOutput, len(executors))
-	var wg sync.WaitGroup
+	var (
+		results = make([]executorOutput, len(executors))
+		wg      sync.WaitGroup
+	)
 
-	for i, ex := range executors {
+	for exName, ex := range executors {
 		var (
 			err   error
 			out   []byte
@@ -146,7 +147,7 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 			select {
 			case err = <-errCh:
 			case <-time.After(time.Minute):
-				err = errors.New("too long execution")
+				err = fmt.Errorf("too long execution for: %s", exName)
 				cancel()
 			}
 		}()
@@ -154,10 +155,16 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 		wg.Wait()
 
 		grepExceptions(out, ds.Seed)
-		results[i] = executorOutput{
-			Output: string(out),
-			Error:  err.Error(),
+
+		var msg string
+		if err != nil {
+			msg = err.Error()
 		}
+
+		results = append(results, executorOutput{
+			Output: string(out),
+			Error:  msg,
+		})
 	}
 
 	diff := cmp.Diff(results[0].Output, results[1].Output)
