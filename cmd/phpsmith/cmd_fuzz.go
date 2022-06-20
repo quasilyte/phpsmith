@@ -147,7 +147,7 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 			select {
 			case err = <-errCh:
 			case <-time.After(time.Minute):
-				err = fmt.Errorf("too long execution for: %s", exName)
+				err = fmt.Errorf("too long execution for: %s on seed %d", exName, ds.Seed)
 				cancel()
 			}
 		}()
