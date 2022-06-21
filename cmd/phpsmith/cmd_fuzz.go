@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,9 +23,9 @@ import (
 
 type executor func(ctx context.Context, filename string, seed int64) ([]byte, error)
 
-var executors = []executor{
-	interpretator.RunPHP,
-	interpretator.RunKPHP,
+var executors = map[string]executor{
+	"php":  interpretator.RunPHP,
+	"kphp": interpretator.RunKPHP,
 }
 
 func cmdFuzz(args []string) error {
@@ -119,39 +120,78 @@ type dirAndSeed struct {
 }
 
 func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
-	var results = make(map[int]executorOutput, len(executors))
-	for i, ex := range executors {
-		var errMsg string
-		r, err := ex(ctx, ds.Dir, ds.Seed)
+	var (
+		results = make([]executorOutput, 0, len(executors))
+		wg      sync.WaitGroup
+	)
 
+	for exName, ex := range executors {
+		var (
+			err   error
+			out   []byte
+			errCh = make(chan error)
+		)
+
+		wg.Add(1)
+
+		func() { // anon func need for close context
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			go func() {
+				defer wg.Done()
+				out, err = ex(ctx, ds.Dir, ds.Seed)
+				errCh <- err
+			}()
+
+			select {
+			case err = <-errCh:
+			case <-time.After(time.Minute):
+				err = fmt.Errorf("too long execution for: %s on seed %d", exName, ds.Seed)
+				cancel()
+			}
+		}()
+
+		wg.Wait()
+
+		grepExceptions(out, ds.Seed)
+
+		var msg string
 		if err != nil {
-			errMsg = err.Error()
+			msg = err.Error()
 		}
 
-		grepExceptions(r, ds.Seed)
-		results[i] = executorOutput{
-			Output: string(r),
-			Error:  errMsg,
-		}
+		results = append(results, executorOutput{
+			Output: string(out),
+			Error:  msg,
+		})
 	}
 
-	diff := cmp.Diff(results[0].Output, results[1].Output)
-	if diff != "" {
+	writeLog := func(diff string) {
 		l, err := os.OpenFile("./"+ds.Dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
 		if err != nil {
 			log.Println("-----------------------------")
 			log.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
 			log.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
 			log.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
-		} else {
-			defer l.Close()
-
-			logger := log.New(l, "", 0)
-			logger.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
-			logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
-			logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
+			return
 		}
+		defer l.Close()
+
+		logger := log.New(l, "", 0)
+		logger.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
+		logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
+		logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
 	}
+
+	diff := cmp.Diff(results[0].Output, results[1].Output)
+	if diff != "" {
+		writeLog(diff)
+	} else if results[0].Error != "" || results[1].Error != "" {
+		diff = "nil"
+		writeLog(diff)
+	}
+
 	return diff != ""
 }
 
