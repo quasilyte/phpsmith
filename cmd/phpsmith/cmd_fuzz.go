@@ -167,23 +167,31 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 		})
 	}
 
-	diff := cmp.Diff(results[0].Output, results[1].Output)
-	if diff != "" {
+	writeLog := func(diff string) {
 		l, err := os.OpenFile("./"+ds.Dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
 		if err != nil {
 			log.Println("-----------------------------")
 			log.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
 			log.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
 			log.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
-		} else {
-			defer l.Close()
-
-			logger := log.New(l, "", 0)
-			logger.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
-			logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
-			logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
+			return
 		}
+		defer l.Close()
+
+		logger := log.New(l, "", 0)
+		logger.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
+		logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
+		logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
 	}
+
+	diff := cmp.Diff(results[0].Output, results[1].Output)
+	if diff != "" {
+		writeLog(diff)
+	} else if results[0].Error != "" || results[1].Error != "" {
+		diff = "nil"
+		writeLog(diff)
+	}
+
 	return diff != ""
 }
 
