@@ -121,7 +121,7 @@ type dirAndSeed struct {
 
 func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 	var (
-		results = make([]executorOutput, len(executors))
+		results = make([]executorOutput, 0, len(executors))
 		wg      sync.WaitGroup
 	)
 
