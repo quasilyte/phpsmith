@@ -1,4 +1,4 @@
-package interpretator
+package php
 
 import (
 	"bytes"
@@ -8,7 +8,9 @@ import (
 	"os/exec"
 )
 
-func RunPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
+type Runner struct{}
+
+func (Runner) Run(ctx context.Context, dir string, seed int64) ([]byte, error) {
 	var (
 		outBuffer bytes.Buffer
 		errBuffer bytes.Buffer
@@ -24,4 +26,8 @@ func RunPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
 	}
 
 	return outBuffer.Bytes(), nil
+}
+
+func (Runner) Name() string {
+	return "php_runner"
 }

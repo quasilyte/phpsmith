@@ -1,4 +1,4 @@
-package interpretator
+package kphp
 
 import (
 	"bytes"
@@ -12,7 +12,9 @@ import (
 
 var mu sync.Mutex
 
-func RunKPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
+type Runner struct{}
+
+func (Runner) Run(ctx context.Context, dir string, seed int64) ([]byte, error) {
 	var (
 		outBuffer bytes.Buffer
 		errBuffer bytes.Buffer
@@ -53,4 +55,8 @@ func RunKPHP(ctx context.Context, dir string, seed int64) ([]byte, error) {
 	}
 
 	return outBuffer.Bytes(), nil
+}
+
+func (Runner) Name() string {
+	return "kphp_runner"
 }

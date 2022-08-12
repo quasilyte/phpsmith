@@ -15,17 +15,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator"
+	"github.com/google/go-cmp/cmp"
+	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator/kphp"
+	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator/php"
 )
 
-type executor func(ctx context.Context, filename string, seed int64) ([]byte, error)
+type Runner interface {
+	Run(ctx context.Context, filename string, seed int64) ([]byte, error)
+	Name() string
+}
 
-var executors = map[string]executor{
-	"php":  interpretator.RunPHP,
-	"kphp": interpretator.RunKPHP,
+var runners = []Runner{
+	php.Runner{},
+	kphp.Runner{},
 }
 
 func cmdFuzz(args []string) error {
@@ -121,11 +125,11 @@ type dirAndSeed struct {
 
 func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 	var (
-		results = make([]executorOutput, 0, len(executors))
+		results = make([]executorOutput, 0, len(runners))
 		wg      sync.WaitGroup
 	)
 
-	for exName, ex := range executors {
+	for _, r := range runners {
 		var (
 			err   error
 			out   []byte
@@ -140,14 +144,14 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 
 			go func() {
 				defer wg.Done()
-				out, err = ex(ctx, ds.Dir, ds.Seed)
+				out, err = r.Run(ctx, ds.Dir, ds.Seed)
 				errCh <- err
 			}()
 
 			select {
 			case err = <-errCh:
 			case <-time.After(time.Minute):
-				err = fmt.Errorf("too long execution for: %s on seed %d", exName, ds.Seed)
+				err = fmt.Errorf("too long execution for: %s on seed %d", r.Name(), ds.Seed)
 				cancel()
 			}
 		}()
