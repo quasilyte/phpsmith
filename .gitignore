@@ -1,5 +1,5 @@
 .idea
 
 bin/
-phpsmith_out/
+phpsmith_out_*
 kphp_out/

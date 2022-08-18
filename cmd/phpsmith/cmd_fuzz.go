@@ -11,20 +11,25 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator"
+	"github.com/google/go-cmp/cmp"
+	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator/kphp"
+	"github.com/quasilyte/phpsmith/cmd/phpsmith/interpretator/php"
 )
 
-type executor func(ctx context.Context, filename string, seed int64) ([]byte, error)
+type Runner interface {
+	Run(ctx context.Context, filename string, seed int64) ([]byte, error)
+	Name() string
+}
 
-var executors = []executor{
-	interpretator.RunPHP,
-	interpretator.RunKPHP,
+var runners = []Runner{
+	php.Runner{},
+	kphp.Runner{},
 }
 
 func cmdFuzz(args []string) error {
@@ -49,8 +54,10 @@ func cmdFuzz(args []string) error {
 	interrupt := make(chan os.Signal, 1)
 	signalNotify(interrupt)
 
-	eg, ctx := errgroup.WithContext(context.Background())
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	eg, ctx := errgroup.WithContext(ctx)
 
 	go func() {
 		<-interrupt
@@ -119,39 +126,71 @@ type dirAndSeed struct {
 }
 
 func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
-	var results = make(map[int]executorOutput, len(executors))
-	for i, ex := range executors {
-		var errMsg string
-		r, err := ex(ctx, ds.Dir, ds.Seed)
+	var (
+		results = make([]executorOutput, 0, len(runners))
+		wg      sync.WaitGroup
+		mu      sync.Mutex
+	)
 
-		if err != nil {
-			errMsg = err.Error()
-		}
+	wg.Add(len(runners))
 
-		grepExceptions(r, ds.Seed)
-		results[i] = executorOutput{
-			Output: string(r),
-			Error:  errMsg,
-		}
+	for _, r := range runners {
+		innerCtx, cancel := context.WithTimeout(ctx, time.Minute)
+		//goland:noinspection GoDeferInLoop
+		defer cancel()
+
+		go func(r Runner) {
+			defer wg.Done()
+
+			out, err := r.Run(innerCtx, ds.Dir, ds.Seed)
+			grepExceptions(out, ds.Seed)
+
+			var msg string
+			if err != nil {
+				select {
+				case <-innerCtx.Done():
+					msg = fmt.Sprintf("too long execution for: %s on seed %d", r.Name(), ds.Seed)
+				default:
+					msg = err.Error()
+				}
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			results = append(results, executorOutput{
+				Output: string(out),
+				Error:  msg,
+			})
+		}(r)
 	}
+	wg.Wait()
 
-	diff := cmp.Diff(results[0].Output, results[1].Output)
-	if diff != "" {
+	writeLog := func(diff string) {
 		l, err := os.OpenFile("./"+ds.Dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
 		if err != nil {
 			log.Println("-----------------------------")
 			log.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
 			log.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
 			log.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
-		} else {
-			defer l.Close()
-
-			logger := log.New(l, "", 0)
-			logger.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
-			logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
-			logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
+			return
 		}
+		defer l.Close()
+
+		logger := log.New(l, "", 0)
+		logger.Printf("diff: %s\t, seed: %d\t\n", diff, ds.Seed)
+		logger.Printf("out: %s\terr: %s\t\n", results[0].Output, results[0].Error)
+		logger.Printf("out: %s\terr: %s\t\n", results[1].Output, results[1].Error)
 	}
+
+	diff := cmp.Diff(results[0].Output, results[1].Output)
+	if diff != "" {
+		writeLog(diff)
+	} else if results[0].Error != "" || results[1].Error != "" {
+		diff = "nil"
+		writeLog(diff)
+	}
+
 	return diff != ""
 }
 

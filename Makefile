@@ -6,7 +6,7 @@ VERSION=0.3.0
 build:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X 'main.BuildVersion=$(VERSION)' -X 'main.BuildTime=$(NOW)' -X 'main.BuildOSUname=$(OS)' -X 'main.BuildCommit=$(AFTER_COMMIT)'" -o bin/phpsmith ./cmd/phpsmith
 
-.PHONY: build
+.PHONY: build lint test ci-lint install-linter run
 
 lint:
 	@echo "Running golangci-lint..."
@@ -19,4 +19,7 @@ test:
 ci-lint: install-linter lint
 
 install-linter:
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45
+
+run:
+	@go run ./... fuzz
