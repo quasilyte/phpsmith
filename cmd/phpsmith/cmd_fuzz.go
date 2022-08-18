@@ -54,8 +54,10 @@ func cmdFuzz(args []string) error {
 	interrupt := make(chan os.Signal, 1)
 	signalNotify(interrupt)
 
-	eg, ctx := errgroup.WithContext(context.Background())
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	eg, ctx := errgroup.WithContext(ctx)
 
 	go func() {
 		<-interrupt
@@ -127,49 +129,42 @@ func fuzzingProcess(ctx context.Context, ds dirAndSeed) bool {
 	var (
 		results = make([]executorOutput, 0, len(runners))
 		wg      sync.WaitGroup
+		mu      sync.Mutex
 	)
 
+	wg.Add(len(runners))
+
 	for _, r := range runners {
-		var (
-			err   error
-			out   []byte
-			errCh = make(chan error)
-		)
+		innerCtx, cancel := context.WithTimeout(ctx, time.Minute)
+		//goland:noinspection GoDeferInLoop
+		defer cancel()
 
-		wg.Add(1)
+		go func(r Runner) {
+			defer wg.Done()
 
-		func() { // anon func need for close context
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
+			out, err := r.Run(innerCtx, ds.Dir, ds.Seed)
+			grepExceptions(out, ds.Seed)
 
-			go func() {
-				defer wg.Done()
-				out, err = r.Run(ctx, ds.Dir, ds.Seed)
-				errCh <- err
-			}()
-
-			select {
-			case err = <-errCh:
-			case <-time.After(time.Minute):
-				err = fmt.Errorf("too long execution for: %s on seed %d", r.Name(), ds.Seed)
-				cancel()
+			var msg string
+			if err != nil {
+				select {
+				case <-innerCtx.Done():
+					msg = fmt.Sprintf("too long execution for: %s on seed %d", r.Name(), ds.Seed)
+				default:
+					msg = err.Error()
+				}
 			}
-		}()
 
-		wg.Wait()
+			mu.Lock()
+			defer mu.Unlock()
 
-		grepExceptions(out, ds.Seed)
-
-		var msg string
-		if err != nil {
-			msg = err.Error()
-		}
-
-		results = append(results, executorOutput{
-			Output: string(out),
-			Error:  msg,
-		})
+			results = append(results, executorOutput{
+				Output: string(out),
+				Error:  msg,
+			})
+		}(r)
 	}
+	wg.Wait()
 
 	writeLog := func(diff string) {
 		l, err := os.OpenFile("./"+ds.Dir+"/log", os.O_RDWR|os.O_CREATE, 0700)
