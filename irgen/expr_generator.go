@@ -186,20 +186,7 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 		return &ir.ArrayType{Elem: elemType}
 
 	case 1:
-		valueType := g.PickScalarType().(*ir.ScalarType)
-		enumType := &ir.EnumType{ValueType: valueType}
-		switch valueType.Kind {
-		case ir.ScalarInt:
-			enumType.Values = append(enumType.Values, int64(1), int64(2), int64(3))
-		case ir.ScalarFloat:
-			enumType.Values = append(enumType.Values, 0.424, -24.3, 32.5)
-		case ir.ScalarString:
-			enumType.Values = append(enumType.Values, "a", "b", "c")
-		default:
-			// Retry.
-			return g.pickType(depth + 1)
-		}
-		return enumType
+		return g.PickEnumType()
 
 	default:
 		return g.PickScalarType()
