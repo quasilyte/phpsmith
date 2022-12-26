@@ -1,5 +1,23 @@
 <?php
 
+function make_positive_inf(): float {
+    $x = 1.0;
+    $y = 0.0;
+    return $x / $y;
+}
+
+function make_negative_inf(): float {
+    $x = -1.0;
+    $y = 0.0;
+    return $x / $y;
+}
+
+function make_nan(): float {
+    $x = 0.0;
+    $y = 0.0;
+    return $x / $y;
+}
+
 function dump_with_pos($file, $line, $v) {
     var_dump(["$file:$line" => $v]);
 }

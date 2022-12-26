@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"strings"
 
@@ -184,8 +185,15 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpIntLit:
 		fmt.Fprintf(p.w, "%#v", n.Value)
 	case ir.OpFloatLit:
-		if n.Value.(float64) == 0 {
+		v := n.Value.(float64)
+		if v == 0 {
 			p.w.WriteString("0.0")
+		} else if math.IsNaN(v) {
+			p.w.WriteString("make_nan()")
+		} else if math.IsInf(v, 1) {
+			p.w.WriteString("make_positive_inf()")
+		} else if math.IsInf(v, -1) {
+			p.w.WriteString("make_negative_inf()")
 		} else {
 			fmt.Fprintf(p.w, "%#v", n.Value)
 		}
