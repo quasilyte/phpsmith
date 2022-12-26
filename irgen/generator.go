@@ -273,7 +273,7 @@ func (g *generator) pushSwitchStmt() {
 	if randutil.Chance(g.rand, 0.3) {
 		tagType = g.expr.PickEnumType()
 	} else {
-		tagType = g.expr.PickScalarType()
+		tagType = g.expr.PickScalarTypeNoBool()
 	}
 	numCases := randutil.IntRange(g.rand, 0, 10)
 	hasDefault := randutil.Bool(g.rand)
@@ -284,9 +284,16 @@ func (g *generator) pushSwitchStmt() {
 
 	tagExpr := g.expr.GenerateValueOfType(tagType)
 	switchNode := &ir.Node{Op: ir.OpSwitch, Args: []*ir.Node{tagExpr}}
+	caseSet := make(map[any]struct{})
 	for i := 0; i < numCases; i++ {
-		g.scope.Enter()
 		x := g.expr.GenerateValueOfType(tagType)
+		caseValue := extractValue(x)
+		if _, ok := caseSet[caseValue]; ok {
+			continue
+		}
+		caseSet[caseValue] = struct{}{}
+
+		g.scope.Enter()
 		caseNode := &ir.Node{Op: ir.OpCase, Args: []*ir.Node{x}}
 		caseSize := randutil.IntRange(g.rand, 0, 2)
 		g.currentBlock = caseNode

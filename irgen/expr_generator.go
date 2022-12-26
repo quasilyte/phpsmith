@@ -194,7 +194,7 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 }
 
 func (g *exprGenerator) PickEnumType() ir.Type {
-	valueType := randutil.Elem(g.rand, scalarTypesNoBool).(*ir.ScalarType)
+	valueType := g.PickScalarTypeNoBool().(*ir.ScalarType)
 	enumType := &ir.EnumType{ValueType: valueType}
 	switch valueType.Kind {
 	case ir.ScalarInt:
@@ -213,6 +213,10 @@ func (g *exprGenerator) PickEnumType() ir.Type {
 		panic("unreachable")
 	}
 	return enumType
+}
+
+func (g *exprGenerator) PickScalarTypeNoBool() ir.Type {
+	return scalarTypesNoBool[g.rand.Intn(len(scalarTypesNoBool))]
 }
 
 func (g *exprGenerator) PickScalarType() ir.Type {
