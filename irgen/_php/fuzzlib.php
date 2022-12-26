@@ -55,10 +55,26 @@ function float_neq3($x, $y) {
 }
 
 /**
- * @kphp-template $x
- * @kphp-template $y
+ * @param float $x
+ * @param float $y
+ * @return float
  */
-function _safe_div($x, $y) {
+function _safe_float_div($x, $y) {
+    if ($y > 0.0 || $y < 0.0) {
+        try {
+            return $x / $y;
+        } catch (\Throwable $e) {
+        }
+    }
+    echo "invalid argument in /\n";
+    return 0.0;
+}
+
+/**
+ * @param int $x
+ * @param int $y
+ */
+function _safe_int_div($x, $y) {
     if ($y > 0 || $y < 0) {
         try {
             return $x / $y;
@@ -70,10 +86,26 @@ function _safe_div($x, $y) {
 }
 
 /**
- * @kphp-template $x
- * @kphp-template $y
+ * @param float $x
+ * @param float $y
+ * @return float
  */
-function _safe_mod($x, $y) {
+function _safe_float_mod($x, $y) {
+    if ($y > 0.0 || $y < 0.0) {
+        try {
+            return $x % $y;
+        } catch (\Throwable $e) {
+        }
+    }
+    echo "invalid argument in %\n";
+    return 0.0;
+}
+
+/**
+ * @param int $x
+ * @param int $y
+ */
+function _safe_int_mod($x, $y) {
     if ($y > 0 || $y < 0) {
         try {
             return $x % $y;

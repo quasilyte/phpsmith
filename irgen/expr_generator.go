@@ -85,11 +85,11 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		}
 	}
 
-	binaryOpGenerator := func(op ir.Op, operandGenerator func() *ir.Node) func() *ir.Node {
+	binaryOpGenerator := func(op ir.Op, typeHint ir.Type, operandGenerator func() *ir.Node) func() *ir.Node {
 		return func() *ir.Node {
 			x := operandGenerator()
 			y := operandGenerator()
-			return &ir.Node{Op: op, Args: []*ir.Node{g.maybeAddParens(x), g.maybeAddParens(y)}}
+			return &ir.Node{Op: op, Args: []*ir.Node{g.maybeAddParens(x), g.maybeAddParens(y)}, Type: typeHint}
 		}
 	}
 
@@ -110,8 +110,8 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	g.condChoices = makeChoicesList(g.boolLit, []exprChoice{
 		{freq: 3, generate: cmpOpGenerator(ir.OpEqual2)},
 		{freq: 3, generate: cmpOpGenerator(ir.OpEqual3)},
-		{freq: 4, generate: binaryOpGenerator(ir.OpAnd, g.boolValue)},
-		{freq: 4, generate: binaryOpGenerator(ir.OpOr, g.boolValue)},
+		{freq: 4, generate: binaryOpGenerator(ir.OpAnd, nil, g.boolValue)},
+		{freq: 4, generate: binaryOpGenerator(ir.OpOr, nil, g.boolValue)},
 		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 5, generate: g.boolVar, fallback: g.boolLit},
 		{freq: 6, generate: g.boolCall},
@@ -121,8 +121,8 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	g.boolChoices = makeChoicesList(g.boolLit, []exprChoice{
 		{freq: 1, generate: cmpOpGenerator(ir.OpEqual2)},
 		{freq: 1, generate: cmpOpGenerator(ir.OpEqual3)},
-		{freq: 3, generate: binaryOpGenerator(ir.OpAnd, g.boolValue)},
-		{freq: 3, generate: binaryOpGenerator(ir.OpOr, g.boolValue)},
+		{freq: 3, generate: binaryOpGenerator(ir.OpAnd, nil, g.boolValue)},
+		{freq: 3, generate: binaryOpGenerator(ir.OpOr, nil, g.boolValue)},
 		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 6, generate: g.boolVar, fallback: g.boolLit},
 		{freq: 3, generate: g.boolLit},
@@ -131,15 +131,15 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 
 	g.intChoices = makeChoicesList(g.intLit, []exprChoice{
 		{freq: 1, generate: g.intTernary},
-		{freq: 2, generate: withCast(binaryOpGenerator(ir.OpAdd, g.intValue), ir.IntType)},
-		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.intValue)},
-		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMul, g.intValue), ir.IntType)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpBitAnd, g.intValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpBitOr, g.intValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpBitXor, g.intValue)},
-		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpExp, g.intValue), ir.IntType)},
-		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpDiv, g.intValue), ir.IntType)},
-		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMod, g.intValue), ir.IntType)},
+		{freq: 2, generate: withCast(binaryOpGenerator(ir.OpAdd, ir.IntType, g.intValue), ir.IntType)},
+		{freq: 2, generate: binaryOpGenerator(ir.OpSub, ir.IntType, g.intValue)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMul, ir.IntType, g.intValue), ir.IntType)},
+		{freq: 1, generate: binaryOpGenerator(ir.OpBitAnd, ir.IntType, g.intValue)},
+		{freq: 1, generate: binaryOpGenerator(ir.OpBitOr, ir.IntType, g.intValue)},
+		{freq: 1, generate: binaryOpGenerator(ir.OpBitXor, ir.IntType, g.intValue)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpExp, ir.IntType, g.intValue), ir.IntType)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpDiv, ir.IntType, g.intValue), ir.IntType)},
+		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMod, ir.IntType, g.intValue), ir.IntType)},
 		{freq: 2, generate: g.intNegation},
 		{freq: 2, generate: g.intCast},
 		{freq: 7, generate: g.intCall},
@@ -149,10 +149,10 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 
 	g.floatChoices = makeChoicesList(g.floatLit, []exprChoice{
 		{freq: 1, generate: g.floatTernary},
-		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, g.floatValue)},
-		{freq: 2, generate: binaryOpGenerator(ir.OpSub, g.floatValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpDiv, g.floatValue)},
-		{freq: 1, generate: binaryOpGenerator(ir.OpMul, g.floatValue)},
+		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, ir.FloatType, g.floatValue)},
+		{freq: 2, generate: binaryOpGenerator(ir.OpSub, ir.FloatType, g.floatValue)},
+		{freq: 1, generate: binaryOpGenerator(ir.OpDiv, ir.FloatType, g.floatValue)},
+		{freq: 1, generate: binaryOpGenerator(ir.OpMul, ir.FloatType, g.floatValue)},
 		{freq: 5, generate: g.floatCall},
 		{freq: 6, generate: g.floatVar, fallback: g.floatLit},
 		{freq: 5, generate: g.floatLit},
@@ -161,7 +161,7 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	g.stringChoices = makeChoicesList(g.stringLit, []exprChoice{
 		{freq: 2, generate: g.stringCast},
 		{freq: 5, generate: g.stringCall},
-		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, g.stringValue)},
+		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, ir.StringType, g.stringValue)},
 		{freq: 5, generate: g.stringLit},
 		{freq: 5, generate: g.interpolatedString},
 		{freq: 6, generate: g.stringVar, fallback: g.stringLit},
@@ -493,7 +493,11 @@ func (g *exprGenerator) stringIndex() *ir.Node {
 	} else {
 		key = ir.NewIntLit(-1)
 	}
-	return ir.NewIndex(s, key)
+	return &ir.Node{
+		Op:   ir.OpCast,
+		Args: []*ir.Node{ir.NewIndex(s, key)},
+		Type: ir.StringType,
+	}
 }
 
 var scalarTypes = []ir.Type{

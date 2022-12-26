@@ -259,9 +259,17 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 	case ir.OpExp:
 		p.printBinary(n, "**")
 	case ir.OpMod:
-		p.printSimpleCall("_safe_mod", n.Args)
+		if n.Type == ir.FloatType {
+			p.printSimpleCall("_safe_float_mod", n.Args)
+		} else {
+			p.printSimpleCall("_safe_int_mod", n.Args)
+		}
 	case ir.OpDiv:
-		p.printSimpleCall("_safe_div", n.Args)
+		if n.Type == ir.FloatType {
+			p.printSimpleCall("_safe_float_div", n.Args)
+		} else {
+			p.printSimpleCall("_safe_int_div", n.Args)
+		}
 	case ir.OpMul:
 		p.printBinary(n, "*")
 	case ir.OpNotEqual2:
