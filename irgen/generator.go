@@ -269,7 +269,12 @@ func (g *generator) pushStatement() {
 }
 
 func (g *generator) pushSwitchStmt() {
-	tagType := g.expr.PickScalarType()
+	var tagType ir.Type
+	if randutil.Chance(g.rand, 0.3) {
+		tagType = g.expr.PickEnumType()
+	} else {
+		tagType = g.expr.PickScalarType()
+	}
 	numCases := randutil.IntRange(g.rand, 0, 10)
 	hasDefault := randutil.Bool(g.rand)
 	prevCurrentBlock := g.currentBlock
@@ -324,13 +329,9 @@ func (g *generator) pushLoopStmt() {
 	loopCond := ir.NewLess(ir.NewPostInc(iterVar), ir.NewIntLit(int64(randutil.IntRange(g.rand, 1, 10))))
 	whileNode := &ir.Node{Op: ir.OpWhile}
 	whileNode.Args = append(whileNode.Args, loopCond)
+
 	g.currentBlock = whileNode
-	switch randutil.IntRange(g.rand, 0, 3) {
-	case 0, 1, 2:
-		g.pushBlockStmt()
-	case 3:
-		g.pushStatement()
-	}
+	g.pushBlockStmt()
 
 	g.scope.Leave()
 	g.insideLoop = prevInLoop
@@ -401,20 +402,14 @@ func (g *generator) pushBlockStmt() {
 func (g *generator) pushIfStmt() {
 	cond := g.expr.condValue()
 
-	withoutBlock := randutil.IntRange(g.rand, 0, 1) == 0
 	oldBlock := g.currentBlock
 	g.scope.Enter()
-	if withoutBlock {
-		ifStmt := &ir.Node{Op: ir.OpIf, Args: []*ir.Node{cond}}
-		g.currentBlock = ifStmt
-		g.pushStatement()
-		oldBlock.Args = append(oldBlock.Args, ir.NewIf(cond, ifStmt))
-	} else {
-		newBlock := &ir.Node{Op: ir.OpBlock}
-		g.currentBlock = newBlock
-		g.pushStatement()
-		oldBlock.Args = append(oldBlock.Args, ir.NewIf(cond, newBlock))
-	}
+
+	newBlock := &ir.Node{Op: ir.OpBlock}
+	g.currentBlock = newBlock
+	g.pushStatement()
+	oldBlock.Args = append(oldBlock.Args, ir.NewIf(cond, newBlock))
+
 	g.scope.Leave()
 	g.currentBlock = oldBlock
 }

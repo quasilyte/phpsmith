@@ -205,6 +205,22 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 	}
 }
 
+func (g *exprGenerator) PickEnumType() ir.Type {
+	valueType := randutil.Elem(g.rand, scalarTypesNoBool).(*ir.ScalarType)
+	enumType := &ir.EnumType{ValueType: valueType}
+	switch valueType.Kind {
+	case ir.ScalarInt:
+		enumType.Values = append(enumType.Values, int64(1), int64(2), int64(3))
+	case ir.ScalarFloat:
+		enumType.Values = append(enumType.Values, 0.424, -24.3, 32.5)
+	case ir.ScalarString:
+		enumType.Values = append(enumType.Values, "a", "b", "c")
+	default:
+		panic("unreachable")
+	}
+	return enumType
+}
+
 func (g *exprGenerator) PickScalarType() ir.Type {
 	return scalarTypes[g.rand.Intn(len(scalarTypes))]
 }
@@ -558,6 +574,12 @@ var stringLitValues = []*ir.Node{
 
 var scalarTypes = []ir.Type{
 	ir.BoolType,
+	ir.IntType,
+	ir.FloatType,
+	ir.StringType,
+}
+
+var scalarTypesNoBool = []ir.Type{
 	ir.IntType,
 	ir.FloatType,
 	ir.StringType,
