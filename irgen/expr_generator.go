@@ -3,8 +3,6 @@ package irgen
 import (
 	"fmt"
 	"math/rand"
-	"strings"
-	"unicode"
 
 	"github.com/quasilyte/phpsmith/ir"
 	"github.com/quasilyte/phpsmith/randutil"
@@ -14,6 +12,8 @@ type exprGenerator struct {
 	config *Config
 
 	rand *rand.Rand
+
+	valueGenerator *valueGenerator
 
 	scope *scope
 
@@ -42,10 +42,11 @@ type exprChoice struct {
 
 func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenerator {
 	g := &exprGenerator{
-		config: config,
-		scope:  s,
-		symtab: symtab,
-		rand:   config.Rand,
+		config:         config,
+		scope:          s,
+		symtab:         symtab,
+		rand:           config.Rand,
+		valueGenerator: newValueGenerator(config.Rand),
 	}
 
 	makeChoicesList := func(fallback func() *ir.Node, options []exprChoice) exprChoiceList {
@@ -210,11 +211,17 @@ func (g *exprGenerator) PickEnumType() ir.Type {
 	enumType := &ir.EnumType{ValueType: valueType}
 	switch valueType.Kind {
 	case ir.ScalarInt:
-		enumType.Values = append(enumType.Values, int64(1), int64(2), int64(3))
+		enumType.Values = toEfaceSlice(generateUniqueValues(randutil.IntRange(g.rand, 2, 30), func() int64 {
+			return g.valueGenerator.IntValue()
+		}))
 	case ir.ScalarFloat:
-		enumType.Values = append(enumType.Values, 0.424, -24.3, 32.5)
+		enumType.Values = toEfaceSlice(generateUniqueValues(randutil.IntRange(g.rand, 2, 16), func() float64 {
+			return g.valueGenerator.FloatValue()
+		}))
 	case ir.ScalarString:
-		enumType.Values = append(enumType.Values, "a", "b", "c")
+		enumType.Values = toEfaceSlice(generateUniqueValues(randutil.IntRange(g.rand, 2, 20), func() string {
+			return g.valueGenerator.StringValue()
+		}))
 	default:
 		panic("unreachable")
 	}
@@ -353,33 +360,15 @@ func (g *exprGenerator) floatTernary() *ir.Node {
 }
 
 func (g *exprGenerator) boolLit() *ir.Node {
-	return boolLitValues[g.rand.Intn(len(boolLitValues))]
+	return ir.NewBoolLit(g.valueGenerator.BoolValue())
 }
 
 func (g *exprGenerator) intLit() *ir.Node {
-	switch g.rand.Intn(8) {
-	case 0, 1:
-		return ir.NewIntLit(int64(g.rand.Intn(0xffff)))
-	case 2, 3:
-		return ir.NewIntLit(-int64(g.rand.Intn(0xffff)))
-	case 4:
-		return ir.NewIntLit(int64(randutil.IntRange(g.rand, 100000, 19438420511)))
-	default:
-		return intLitValues[g.rand.Intn(len(intLitValues))]
-	}
+	return ir.NewIntLit(g.valueGenerator.IntValue())
 }
 
 func (g *exprGenerator) floatLit() *ir.Node {
-	switch g.rand.Intn(8) {
-	case 0:
-		return ir.NewFloatLit(g.rand.Float64())
-	case 2, 3:
-		return ir.NewFloatLit(g.rand.Float64() * float64(g.rand.Intn(1000)))
-	case 4:
-		return ir.NewFloatLit(g.rand.Float64() * float64(g.rand.Intn(10000000)))
-	default:
-		return floatLitValues[g.rand.Intn(len(floatLitValues))]
-	}
+	return ir.NewFloatLit(g.valueGenerator.FloatValue())
 }
 
 func (g *exprGenerator) interpolatedString() *ir.Node {
@@ -406,18 +395,7 @@ func (g *exprGenerator) interpolatedString() *ir.Node {
 }
 
 func (g *exprGenerator) stringLit() *ir.Node {
-	var s strings.Builder
-	count := randutil.IntRange(g.rand, 1, 6)
-	for i := 0; i < count; i++ {
-		ch := g.rand.Intn(unicode.MaxASCII)
-		if !unicode.IsPrint(rune(ch)) || ch == '$' {
-			s.WriteString(stringLitValues[g.rand.Intn(len(stringLitValues))].Value.(string))
-		} else {
-			s.WriteByte(byte(ch))
-		}
-	}
-
-	return ir.NewStringLit(s.String())
+	return ir.NewStringLit(g.valueGenerator.StringValue())
 }
 
 func (g *exprGenerator) varOfType(typ ir.Type) *ir.Node {
@@ -525,51 +503,6 @@ func (g *exprGenerator) stringIndex() *ir.Node {
 		key = ir.NewIntLit(-1)
 	}
 	return ir.NewIndex(s, key)
-}
-
-var boolLitValues = []*ir.Node{
-	ir.NewBoolLit(false),
-	ir.NewBoolLit(true),
-}
-
-var intLitValues = []*ir.Node{
-	ir.NewIntLit(0),
-	ir.NewIntLit(-1),
-	ir.NewIntLit(0xff),
-	ir.NewIntLit(9284128),
-	ir.NewIntLit(128412288),
-	ir.NewIntLit(-9284120),
-	ir.NewIntLit(-0xff),
-}
-
-var floatLitValues = []*ir.Node{
-	ir.NewFloatLit(0),
-	ir.NewFloatLit(-1),
-	ir.NewFloatLit(2.51),
-	ir.NewFloatLit(329.5),
-	ir.NewFloatLit(0.00043),
-	ir.NewFloatLit(21948.293242),
-	ir.NewFloatLit(-2222.9999),
-	ir.NewFloatLit(2842.6378),
-}
-
-var stringLitValues = []*ir.Node{
-	ir.NewStringLit(""),
-	ir.NewStringLit(","),
-	ir.NewStringLit(" "),
-	ir.NewStringLit("0x1f"),
-	ir.NewStringLit("000"),
-	ir.NewStringLit("24"),
-	ir.NewStringLit("-123"),
-	ir.NewStringLit("\x00"),
-	ir.NewStringLit("simple string"),
-	ir.NewStringLit("1\n2"),
-	ir.NewStringLit("<div/>"),
-	ir.NewStringLit("<h1>ok</h1>"),
-	ir.NewStringLit("<p>"),
-	ir.NewStringLit("</p>"),
-	ir.NewStringLit(`{"key":1}`),
-	ir.NewStringLit(`["val"]`),
 }
 
 var scalarTypes = []ir.Type{
