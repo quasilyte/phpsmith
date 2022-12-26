@@ -12,6 +12,19 @@ func typesIdentical(t1, t2 ir.Type) bool {
 		t2, ok := t2.(*ir.ScalarType)
 		return ok && t1.Kind == t2.Kind
 
+	case *ir.EnumType:
+		t2, ok := t2.(*ir.EnumType)
+		if !ok || len(t1.Values) != len(t1.Values) || !typesIdentical(t1.ValueType, t2.ValueType) {
+			return false
+		}
+		for i, v1 := range t1.Values {
+			v2 := t2.Values[i]
+			if v1 != v2 {
+				return false
+			}
+		}
+		return true
+
 	default:
 		panic(fmt.Sprintf("unexpected type %T", t1))
 	}

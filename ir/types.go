@@ -1,5 +1,9 @@
 package ir
 
+type Type interface {
+	String() string
+}
+
 var (
 	VoidType   = &ScalarType{Kind: ScalarVoid}
 	BoolType   = &ScalarType{Kind: ScalarBool}
@@ -45,10 +49,6 @@ func (k ScalarKind) String() string {
 	}
 }
 
-type Type interface {
-	String() string
-}
-
 type ScalarType struct {
 	Kind ScalarKind
 }
@@ -78,6 +78,11 @@ type FuncType struct {
 	NeedCast   bool
 }
 
+type EnumType struct {
+	ValueType *ScalarType
+	Values    []interface{}
+}
+
 func (typ *ScalarType) String() string {
 	return typ.Kind.String()
 }
@@ -96,4 +101,8 @@ func (typ *NullableType) String() string {
 
 func (typ *ArrayType) String() string {
 	return "(" + typ.Elem.String() + "[])"
+}
+
+func (typ *EnumType) String() string {
+	return typ.ValueType.String()
 }

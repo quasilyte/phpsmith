@@ -184,6 +184,22 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 		elemType := g.pickType(depth + 1)
 		return &ir.ArrayType{Elem: elemType}
 
+	case 1:
+		valueType := g.PickScalarType().(*ir.ScalarType)
+		enumType := &ir.EnumType{ValueType: valueType}
+		switch valueType.Kind {
+		case ir.ScalarInt:
+			enumType.Values = append(enumType.Values, int64(1), int64(2), int64(3))
+		case ir.ScalarFloat:
+			enumType.Values = append(enumType.Values, 0.424, -24.3, 32.5)
+		case ir.ScalarString:
+			enumType.Values = append(enumType.Values, "a", "b", "c")
+		default:
+			// Retry.
+			return g.pickType(depth + 1)
+		}
+		return enumType
+
 	default:
 		return g.PickScalarType()
 	}
@@ -209,6 +225,24 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 			return g.mixedValue(true)
 		default:
 			panic(fmt.Sprintf("unexpected %s scalar type", typ.Kind))
+		}
+
+	case *ir.EnumType:
+		roll := g.rand.Float64()
+		if roll < 0.6 {
+			if v := g.varOfType(typ); v != nil {
+				return v
+			}
+		}
+		switch typ.ValueType.Kind {
+		case ir.ScalarInt:
+			return ir.NewIntLit(randutil.Elem(g.rand, typ.Values).(int64))
+		case ir.ScalarFloat:
+			return ir.NewFloatLit(randutil.Elem(g.rand, typ.Values).(float64))
+		case ir.ScalarString:
+			return ir.NewStringLit(randutil.Elem(g.rand, typ.Values).(string))
+		default:
+			panic(fmt.Sprintf("unexpected %s enum type", typ.ValueType))
 		}
 
 	case *ir.ArrayType:

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"strings"
 
 	"github.com/quasilyte/phpsmith/ir"
 	"github.com/quasilyte/phpsmith/phpdoc"
@@ -45,6 +46,12 @@ func FprintRootNode(w io.Writer, n ir.RootNode, config *Config) {
 	}
 	p.printRootNode(n)
 	p.w.Flush()
+}
+
+func SprintNode(n *ir.Node) string {
+	var buf strings.Builder
+	FprintNode(&buf, n, &Config{})
+	return buf.String()
 }
 
 func FprintNode(w io.Writer, n *ir.Node, config *Config) {
