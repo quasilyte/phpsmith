@@ -14,7 +14,7 @@ func typesIdentical(t1, t2 ir.Type) bool {
 
 	case *ir.EnumType:
 		t2, ok := t2.(*ir.EnumType)
-		if !ok || len(t1.Values) != len(t1.Values) || !typesIdentical(t1.ValueType, t2.ValueType) {
+		if !ok || len(t1.Values) != len(t2.Values) || !typesIdentical(t1.ValueType, t2.ValueType) {
 			return false
 		}
 		for i, v1 := range t1.Values {
