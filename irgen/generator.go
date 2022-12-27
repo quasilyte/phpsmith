@@ -258,7 +258,9 @@ func (g *generator) pushStatement() {
 			g.pushIfStmt()
 		}
 	case 2, 3, 4:
-		g.pushVarDump()
+		if !g.pushVarDump() {
+			g.pushAssignStmt()
+		}
 	case 5, 6:
 		g.pushAssignStmt()
 	case 7:
@@ -380,14 +382,18 @@ func (g *generator) pushAssignStmt() {
 	g.currentBlock.Args = append(g.currentBlock.Args, assign)
 }
 
-func (g *generator) pushVarDump() {
-	typ := g.expr.PickType()
-	arg := g.expr.GenerateValueOfType(typ)
-	switch typ.(type) {
-	case *ir.ScalarType, *ir.ArrayType:
+func (g *generator) pushVarDump() bool {
+	for attempts := 0; attempts < 5; attempts++ {
+		typ := g.expr.PickType()
+		if !canDump(typ) {
+			continue
+		}
+		arg := g.expr.GenerateValueOfType(typ)
 		varDump := g.varDumpCall(arg)
 		g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+		return true
 	}
+	return false
 }
 
 func (g *generator) varDumpCall(arg *ir.Node) *ir.Node {
