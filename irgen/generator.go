@@ -204,8 +204,10 @@ func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 	} else {
 		for _, name := range blockVars {
 			v := g.scope.FindVarByName(name)
-			varDump := g.varDumpCall(ir.NewVar(name, v.typ))
-			g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+			if canDump(v.typ) {
+				varDump := g.varDumpCall(ir.NewVar(name, v.typ))
+				g.currentBlock.Args = append(g.currentBlock.Args, varDump)
+			}
 		}
 	}
 
