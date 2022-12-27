@@ -19,7 +19,7 @@ test:
 ci-lint: install-linter lint
 
 install-linter:
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
 
 run:
 	@go run ./... fuzz
