@@ -186,15 +186,16 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		fmt.Fprintf(p.w, "%#v", n.Value)
 	case ir.OpFloatLit:
 		v := n.Value.(float64)
-		if v == 0 {
+		switch {
+		case v == 0:
 			p.w.WriteString("0.0")
-		} else if math.IsNaN(v) {
+		case math.IsNaN(v):
 			p.w.WriteString("make_nan()")
-		} else if math.IsInf(v, 1) {
+		case math.IsInf(v, 1):
 			p.w.WriteString("make_positive_inf()")
-		} else if math.IsInf(v, -1) {
+		case math.IsInf(v, -1):
 			p.w.WriteString("make_negative_inf()")
-		} else {
+		default:
 			fmt.Fprintf(p.w, "%#v", n.Value)
 		}
 	case ir.OpStringLit:

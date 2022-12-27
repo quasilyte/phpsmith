@@ -85,8 +85,8 @@ func (g *valueGenerator) StringValue() string {
 	return s.String()
 }
 
-func (b *valueGenerator) BoolValue() bool {
-	return randutil.Chance(b.rand, 0.5)
+func (g *valueGenerator) BoolValue() bool {
+	return randutil.Chance(g.rand, 0.5)
 }
 
 var intLitValues = []int64{
