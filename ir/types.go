@@ -1,5 +1,7 @@
 package ir
 
+import "strings"
+
 type Type interface {
 	String() string
 }
@@ -70,6 +72,10 @@ type ArrayType struct {
 	Elem Type
 }
 
+type TupleType struct {
+	Elems []Type
+}
+
 type FuncType struct {
 	Name       string
 	Params     []TypeField
@@ -105,4 +111,12 @@ func (typ *ArrayType) String() string {
 
 func (typ *EnumType) String() string {
 	return typ.ValueType.String()
+}
+
+func (typ *TupleType) String() string {
+	parts := make([]string, len(typ.Elems))
+	for i, e := range typ.Elems {
+		parts[i] = e.String()
+	}
+	return "tuple(" + strings.Join(parts, ",") + ")"
 }

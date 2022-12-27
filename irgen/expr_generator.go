@@ -180,17 +180,31 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 		return g.PickScalarType()
 	}
 
-	switch g.rand.Intn(6 + depth*3) {
+	switch g.rand.Intn(8 + depth*3) {
 	case 0:
 		elemType := g.pickType(depth + 1)
 		return &ir.ArrayType{Elem: elemType}
 
 	case 1:
+		return g.pickTupleType(depth + 2)
+
+	case 2:
 		return g.PickEnumType()
 
 	default:
 		return g.PickScalarType()
 	}
+}
+
+func (g *exprGenerator) pickTupleType(depth int) ir.Type {
+	numElems := randutil.IntRange(g.rand, 1, 12)
+	tuple := &ir.TupleType{
+		Elems: make([]ir.Type, 0, numElems),
+	}
+	for i := 0; i < numElems; i++ {
+		tuple.Elems = append(tuple.Elems, g.pickType(depth))
+	}
+	return tuple
 }
 
 func (g *exprGenerator) PickEnumType() ir.Type {
@@ -261,6 +275,9 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 
 	case *ir.ArrayType:
 		return g.arrayValue(typ.Elem)
+
+	case *ir.TupleType:
+		return g.tupleValue(typ)
 
 	default:
 		panic(fmt.Sprintf("unexpected %T type", typ))
@@ -457,6 +474,18 @@ func (g *exprGenerator) castToType(typ ir.Type) *ir.Node {
 
 func (g *exprGenerator) intCast() *ir.Node    { return g.castToType(ir.IntType) }
 func (g *exprGenerator) stringCast() *ir.Node { return g.castToType(ir.StringType) }
+
+func (g *exprGenerator) tupleValue(typ *ir.TupleType) *ir.Node {
+	g.exprDepth++
+	defer func() { g.exprDepth-- }()
+
+	numElems := len(typ.Elems)
+	elems := make([]*ir.Node, numElems)
+	for i := 0; i < numElems; i++ {
+		elems[i] = g.GenerateValueOfType(typ.Elems[i])
+	}
+	return ir.NewCall(ir.NewName("tuple"), elems...)
+}
 
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 	g.exprDepth++

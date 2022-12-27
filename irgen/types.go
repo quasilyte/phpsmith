@@ -6,6 +6,17 @@ import (
 	"github.com/quasilyte/phpsmith/ir"
 )
 
+func canDump(t ir.Type) bool {
+	switch t := t.(type) {
+	case *ir.ScalarType, *ir.EnumType:
+		return true
+	case *ir.ArrayType:
+		return canDump(t.Elem)
+	default:
+		return false
+	}
+}
+
 func typesIdentical(t1, t2 ir.Type) bool {
 	switch t1 := t1.(type) {
 	case *ir.ScalarType:
