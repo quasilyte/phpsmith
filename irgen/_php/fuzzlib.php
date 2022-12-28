@@ -1,5 +1,19 @@
 <?php
 
+function _string_non_empty($x) {
+    if ($x == '') {
+        return ' ';
+    }
+    return $x;
+}
+
+function _int_gt_zero($x) {
+    if ($x <= 0) {
+        return 1;
+    }
+    return $x;
+}
+
 /**
  * @param string $name
  * @return bool
