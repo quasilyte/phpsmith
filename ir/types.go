@@ -8,7 +8,19 @@ import (
 
 type Type interface {
 	String() string
+	Tag() int
 }
+
+const (
+	TypeTagScalar = iota
+	TypeTagClass
+	TypeTagUnion
+	TypeTagNullable
+	TypeTagArray
+	TypeTagTuple
+	TypeTagFunc
+	TypeTagEnum
+)
 
 var (
 	VoidType   = &ScalarType{Kind: ScalarVoid}
@@ -51,6 +63,8 @@ func (k ScalarKind) String() string {
 		return "float"
 	case ScalarString:
 		return "string"
+	case ScalarMixed:
+		return "mixed"
 	default:
 		return "?"
 	}
@@ -108,6 +122,15 @@ type EnumType struct {
 	Values    []interface{}
 }
 
+func (typ *ScalarType) Tag() int   { return TypeTagScalar }
+func (typ *ClassType) Tag() int    { return TypeTagClass }
+func (typ *UnionType) Tag() int    { return TypeTagUnion }
+func (typ *NullableType) Tag() int { return TypeTagNullable }
+func (typ *ArrayType) Tag() int    { return TypeTagArray }
+func (typ *EnumType) Tag() int     { return TypeTagEnum }
+func (typ *TupleType) Tag() int    { return TypeTagTuple }
+func (typ *FuncType) Tag() int     { return TypeTagFunc }
+
 func (typ *ScalarType) String() string {
 	return typ.Kind.String()
 }
@@ -138,4 +161,12 @@ func (typ *TupleType) String() string {
 		parts[i] = e.String()
 	}
 	return "tuple(" + strings.Join(parts, ",") + ")"
+}
+
+func (typ *FuncType) String() string {
+	args := make([]string, len(typ.Params))
+	for i, e := range typ.Params {
+		args[i] = e.Type.String()
+	}
+	return "callable(" + strings.Join(args, ",") + "):" + typ.Result.String()
 }

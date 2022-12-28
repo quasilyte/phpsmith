@@ -1,6 +1,11 @@
 package irgen
 
-import "github.com/quasilyte/phpsmith/ir"
+import (
+	"fmt"
+	"sort"
+
+	"github.com/quasilyte/phpsmith/ir"
+)
 
 type symbolTable struct {
 	funcs   map[string]*ir.FuncType
@@ -27,6 +32,10 @@ type fieldRef struct {
 	class *ir.ClassType
 }
 
+func (ref fieldRef) Get() *ir.TypeField {
+	return &ref.class.Fields[ref.index]
+}
+
 func newSymbolTable() *symbolTable {
 	return &symbolTable{
 		funcs:   make(map[string]*ir.FuncType),
@@ -39,6 +48,50 @@ func (symtab *symbolTable) Sort() {
 		panic("double symtab sorting")
 	}
 	symtab.sorted = true
+
+	sort.SliceStable(symtab.arrayFuncs, func(i, j int) bool {
+		return typeLess(symtab.arrayFuncs[i].Result, symtab.arrayFuncs[j].Result)
+	})
+	sort.SliceStable(symtab.arrayFields, func(i, j int) bool {
+		return typeLess(symtab.arrayFields[i].Get().Type, symtab.arrayFields[j].Get().Type)
+	})
+}
+
+func (symtab *symbolTable) FindFuncsOfType(typ ir.Type) []*ir.FuncType {
+	switch typ := typ.(type) {
+	case *ir.ScalarType:
+		switch typ.Kind {
+		case ir.ScalarBool:
+			return symtab.boolFuncs
+		case ir.ScalarInt:
+			return symtab.intFuncs
+		case ir.ScalarFloat:
+			return symtab.floatFuncs
+		case ir.ScalarString:
+			return symtab.stringFuncs
+		case ir.ScalarVoid:
+			return symtab.voidFuncs
+		default:
+			return nil
+		}
+
+	case *ir.ArrayType:
+		i := sort.Search(len(symtab.arrayFuncs), func(i int) bool {
+			return !typeLess(symtab.arrayFuncs[i].Result, typ)
+		})
+		if i < len(symtab.arrayFuncs) && typesIdentical(symtab.arrayFuncs[i].Result, typ) {
+			j := i
+			for j < len(symtab.arrayFuncs)-1 && typesIdentical(symtab.arrayFuncs[j+1].Result, typ) {
+				j++
+			}
+			return symtab.arrayFuncs[i : j+1]
+		}
+		return nil
+
+	default:
+		return nil
+	}
+
 }
 
 func (symtab *symbolTable) PickRandomClass() *ir.ClassType {
@@ -48,11 +101,22 @@ func (symtab *symbolTable) PickRandomClass() *ir.ClassType {
 	return nil
 }
 
-func (symtab *symbolTable) AddClass(c *ir.ClassType) {
+func (symtab *symbolTable) DeclareClass(name string) {
+	if symtab.classes[name] != nil {
+		panic(fmt.Sprintf("class %s is already declared", name))
+	}
+	symtab.classes[name] = &ir.ClassType{Name: name}
+}
+
+func (symtab *symbolTable) DefineClass(c *ir.ClassType) {
 	if symtab.sorted {
 		panic("adding to a sorted symtab")
 	}
-	symtab.classes[c.Name] = c
+	declared := symtab.classes[c.Name]
+	if declared == nil {
+		panic(fmt.Sprintf("class %s was not declared and can't be defined", c.Name))
+	}
+	*declared = *c
 
 	for i, field := range c.Fields {
 		switch fieldType := field.Type.(type) {

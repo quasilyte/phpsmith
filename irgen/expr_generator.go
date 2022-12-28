@@ -326,7 +326,7 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 		return g.enumValue(typ)
 
 	case *ir.ArrayType:
-		return g.arrayValue(typ.Elem)
+		return g.arrayValue(typ)
 
 	case *ir.TupleType:
 		return g.tupleValue(typ)
@@ -398,7 +398,7 @@ func (g *exprGenerator) mixedValue(permitArray bool) *ir.Node {
 	case 3:
 		return g.stringValue()
 	case 4:
-		return g.arrayValue(g.PickScalarType())
+		return g.arrayValue(&ir.ArrayType{Elem: g.PickScalarType()})
 	}
 	panic("unreachable")
 }
@@ -595,8 +595,14 @@ func (g *exprGenerator) constArrayValue(elemType ir.Type) *ir.Node {
 	return g.makeArrayValue(elemType, g.GenerateConstValueOfType)
 }
 
-func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
-	return g.makeArrayValue(elemType, g.GenerateValueOfType)
+func (g *exprGenerator) arrayValue(typ *ir.ArrayType) *ir.Node {
+	if randutil.Chance(g.rand, 0.3) {
+		funcs := g.symtab.FindFuncsOfType(typ)
+		if len(funcs) != 0 {
+			return g.callOfType(randutil.Elem(g.rand, funcs))
+		}
+	}
+	return g.makeArrayValue(typ.Elem, g.GenerateValueOfType)
 }
 
 func (g *exprGenerator) makeArrayValue(elemType ir.Type, elemGen func(ir.Type) *ir.Node) *ir.Node {

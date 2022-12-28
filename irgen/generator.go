@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 	"math/rand"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -38,6 +37,12 @@ type generator struct {
 	expr   *exprGenerator
 }
 
+type fileTemplate struct {
+	name       string
+	classTypes []*ir.ClassType
+	funcTypes  []*ir.FuncType
+}
+
 func newGenerator(config *Config) *generator {
 	symtab := newSymbolTable()
 	{
@@ -65,18 +70,49 @@ func (g *generator) CreateProgram() *Program {
 		{Name: "fuzzlib.php", Contents: phpFuzzlib},
 	}
 
+	// We collect all the declarations before generating any IR.
+	// This is needed to finalize the types information.
+	var fileTemplates []fileTemplate
+
 	numClasses := randutil.IntRange(g.rand, 7, 10)
+	// First, declare all the classes without setting their fields or methods.
 	for i := 0; i < numClasses; i++ {
-		filename := fmt.Sprintf("Class%d.php", i)
-		g.files = append(g.files, g.createClassFile(filename))
-		mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: filename})
+		className := fmt.Sprintf("Class%d", i)
+		g.symtab.DeclareClass(className)
 	}
+	// Now that all classes can reference each other, generate their types.
+	// We have class types available for the fields at this point.
+	for _, c := range g.symtab.classes {
+		fileName := c.Name + ".php"
+		fileTemplates = append(fileTemplates, g.createClassFileTemplate(c.Name, fileName))
+	}
+
 	numLibs := randutil.IntRange(g.rand, 3, 5)
 	for i := 0; i < numLibs; i++ {
-		filename := fmt.Sprintf("lib%d.php", i)
-		g.files = append(g.files, g.createLibFile(filename))
-		mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: filename})
+		fileName := fmt.Sprintf("lib%d.php", i)
+		fileTemplates = append(fileTemplates, g.createLibFileTemplate(fileName))
 	}
+
+	// Define/add all symbols.
+	for _, ft := range fileTemplates {
+		for _, c := range ft.classTypes {
+			g.symtab.DefineClass(c)
+		}
+		for _, f := range ft.funcTypes {
+			g.symtab.AddFunc(f)
+		}
+	}
+
+	// We can finalize the symtab now.
+	// No new symbols should be added after this point.
+	g.symtab.Sort()
+
+	// Next generate the actual IR for the file templates.
+	for _, ft := range fileTemplates {
+		g.files = append(g.files, g.createFile(ft))
+		mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: ft.name})
+	}
+
 	mainFile := g.createMainFile(mainFileRequires)
 	g.files = append(g.files, mainFile)
 	return &Program{
@@ -85,22 +121,31 @@ func (g *generator) CreateProgram() *Program {
 	}
 }
 
-func (g *generator) createClassFile(filename string) *File {
-	file := &File{Name: filename}
+func (g *generator) createClassFileTemplate(className, fileName string) fileTemplate {
+	return fileTemplate{
+		name: fileName,
+		classTypes: []*ir.ClassType{
+			g.createClassType(className),
+		},
+	}
+}
 
-	className := strings.TrimSuffix(filepath.Base(filename), ".php")
-	classType := g.createClassType(className)
-	g.symtab.AddClass(classType)
+func (g *generator) createFile(ft fileTemplate) *File {
+	file := &File{Name: ft.name}
 
-	decl := &ir.RootClassDecl{
-		Type: classType,
+	for _, c := range ft.classTypes {
+		decl := &ir.RootClassDecl{
+			Type: c,
+		}
+		for _, m := range c.Methods {
+			decl.Methods = append(decl.Methods, g.createFunc(m))
+		}
+		file.Nodes = append(file.Nodes, decl)
 	}
 
-	for _, m := range classType.Methods {
-		decl.Methods = append(decl.Methods, g.createFunc(m))
+	for _, f := range ft.funcTypes {
+		file.Nodes = append(file.Nodes, g.createFunc(f))
 	}
-
-	file.Nodes = append(file.Nodes, decl)
 
 	return file
 }
@@ -129,21 +174,18 @@ func (g *generator) createClassType(classname string) *ir.ClassType {
 	return c
 }
 
-func (g *generator) createLibFile(filename string) *File {
-	file := &File{Name: filename}
-
-	funcPrefix := strings.TrimSuffix(filename, ".php")
-
+func (g *generator) createLibFileTemplate(fileName string) fileTemplate {
+	ft := fileTemplate{
+		name: fileName,
+	}
+	funcPrefix := strings.TrimSuffix(fileName, ".php")
 	numLibFuncs := randutil.IntRange(g.rand, 3, 5)
 	for i := 0; i < numLibFuncs; i++ {
 		funcName := fmt.Sprintf("%s_func%d", funcPrefix, i)
 		funcType := g.createFuncType(funcName, true, nil)
-		fn := g.createFunc(funcType)
-		file.Nodes = append(file.Nodes, fn)
-		g.symtab.AddFunc(fn.Type)
+		ft.funcTypes = append(ft.funcTypes, funcType)
 	}
-
-	return file
+	return ft
 }
 
 func (g *generator) createMainFile(requires []*ir.RootRequire) *File {
