@@ -105,18 +105,49 @@ func (p *printer) printRootNode(n ir.RootNode) {
 		if flags.NeedNewline() {
 			p.w.WriteString("\n")
 		}
+	case *ir.RootClassDecl:
+		p.printClassDecl(n)
+	default:
+		panic(fmt.Sprintf("unexpected %T node", n))
 	}
 }
 
+func (p *printer) printClassDecl(decl *ir.RootClassDecl) {
+	p.w.WriteString("class " + decl.Type.Name)
+	p.w.WriteString(" {\n")
+	p.depth += 2
+	for _, fieldType := range decl.Type.Fields {
+		fmt.Fprintf(p.w, "  /** @var %s */\n", fieldType.Type.String())
+		fmt.Fprintf(p.w, "  %s $%s", accessModifier(fieldType.Flags), fieldType.Name)
+		if fieldType.Init != nil {
+			p.w.WriteString(" = ")
+			p.printNode(fieldType.Init.(*ir.Node))
+		}
+		p.w.WriteString(";\n")
+	}
+	for _, method := range decl.Methods {
+		p.printFuncDecl(method)
+	}
+	p.depth -= 2
+	p.w.WriteString("}\n")
+}
+
 func (p *printer) printFuncDecl(decl *ir.RootFuncDecl) {
-	if len(decl.Tags) != 0 {
+	if len(decl.Type.Tags) != 0 {
+		p.indent()
 		p.w.WriteString("/**\n")
-		for _, tag := range decl.Tags {
+		for _, tag := range decl.Type.Tags {
+			p.indent()
 			fmt.Fprintf(p.w, " * @%s %s\n", tag.Name(), tag.Value())
 		}
+		p.indent()
 		p.w.WriteString(" */\n")
 	}
 
+	p.indent()
+	if decl.Type.Class != nil {
+		p.w.WriteString("public ")
+	}
 	p.w.WriteString("function " + decl.Type.Name)
 	p.w.WriteByte('(')
 	for i, param := range decl.Type.Params {
@@ -218,10 +249,18 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.printNode(n.Args[1])
 		p.w.WriteByte(']')
 
+	case ir.OpMemberAccess:
+		p.printNode(n.Args[0])
+		p.w.WriteString("->" + n.Value.(string))
+
 	case ir.OpVar:
 		p.w.WriteString("$" + n.Value.(string))
 	case ir.OpName:
 		p.w.WriteString(n.Value.(string))
+
+	case ir.OpNew:
+		p.w.WriteString("new " + n.Value.(string))
+		p.printArgList(n.Args)
 
 	case ir.OpAssign:
 		if varTag, ok := n.Value.(*phpdoc.VarTag); ok {
@@ -398,6 +437,9 @@ func (p *printer) printNode(n *ir.Node) printFlags {
 		p.printNode(n.Args[0])
 		p.w.WriteString(") ")
 		return p.printNode(n.Args[1])
+
+	default:
+		panic(fmt.Sprintf("unexpected %s", n.Op))
 	}
 
 	return flagNeedNewline | flagNeedSemicolon
@@ -407,8 +449,7 @@ func (p *printer) printSimpleCall(name string, args []*ir.Node) {
 	p.printCall(ir.NewName(name), args)
 }
 
-func (p *printer) printCall(fn *ir.Node, args []*ir.Node) {
-	p.printNode(fn)
+func (p *printer) printArgList(args []*ir.Node) {
 	p.w.WriteByte('(')
 	for i, arg := range args {
 		if i != 0 {
@@ -417,6 +458,11 @@ func (p *printer) printCall(fn *ir.Node, args []*ir.Node) {
 		p.printNode(arg)
 	}
 	p.w.WriteByte(')')
+}
+
+func (p *printer) printCall(fn *ir.Node, args []*ir.Node) {
+	p.printNode(fn)
+	p.printArgList(args)
 }
 
 func (p *printer) printUnaryPrefix(n *ir.Node, op string) {

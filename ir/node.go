@@ -104,11 +104,15 @@ const (
 	// $Value.(string) contains a symbol name
 	OpName
 
+	// 'new' $Value.(string) '(' $Args... ')'
+	// $Type is a *ClassType
+	OpNew
+
 	// '!' $Args[0]
 	OpNot
 
 	// $Args[0] '->' $Value.(string)
-	OpProp
+	OpMemberAccess
 
 	// $Args[0] '[' $Args[1] ']'
 	OpIndex
@@ -337,8 +341,8 @@ func NewNot(x *Node) *Node {
 	return &Node{Op: OpNot, Args: []*Node{x}}
 }
 
-func NewProp(obj *Node, propName string) *Node {
-	return &Node{Op: OpProp, Value: propName, Args: []*Node{obj}}
+func NewMemberAccess(obj *Node, propName string) *Node {
+	return &Node{Op: OpMemberAccess, Value: propName, Args: []*Node{obj}}
 }
 
 func NewIndex(array, key *Node) *Node {

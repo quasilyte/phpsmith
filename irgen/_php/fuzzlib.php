@@ -1,21 +1,38 @@
 <?php
 
+/**
+ * @param string $name
+ * @return bool
+ */
+function _visit_function($name) {
+    static $counters = [];
+    if ($counters[$name] > 10) {
+        echo "$name reached call limit\n";
+        return false;
+    }
+    $counters[$name]++;
+    return true;
+}
+
 function make_positive_inf(): float {
-    $x = 1.0;
-    $y = 0.0;
-    return $x / $y;
+#ifndef KPHP
+    return INF;
+#endif
+    return 1.7976931348623157E+308 * 10;
 }
 
 function make_negative_inf(): float {
-    $x = -1.0;
-    $y = 0.0;
-    return $x / $y;
+#ifndef KPHP
+    return -INF;
+#endif
+    return -(1.7976931348623157E+308 * 10);
 }
 
 function make_nan(): float {
-    $x = 0.0;
-    $y = 0.0;
-    return $x / $y;
+#ifndef KPHP
+    return NAN;
+#endif
+    return acos(-8);
 }
 
 function dump_with_pos($file, $line, $v) {
@@ -115,3 +132,10 @@ function _safe_int_mod($x, $y) {
     echo "invalid argument in %\n";
     return 0;
 }
+
+#ifndef KPHP
+function tuple(...$args) {
+    // turn off PhpStorm native inferring
+    return ${'args'};
+}
+#endif

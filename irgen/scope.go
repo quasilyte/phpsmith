@@ -10,8 +10,9 @@ type scope struct {
 }
 
 type scopeVar struct {
-	name string
-	typ  ir.Type
+	name    string
+	isParam bool
+	typ     ir.Type
 }
 
 func newScope() *scope {
@@ -26,6 +27,11 @@ func (s *scope) Leave() {
 	depth := s.depths[len(s.depths)-1]
 	s.depths = s.depths[:len(s.depths)-1]
 	s.vars = s.vars[:len(s.vars)-depth]
+}
+
+func (s *scope) PushParam(name string, typ ir.Type) {
+	s.vars = append(s.vars, scopeVar{name: name, typ: typ, isParam: true})
+	s.depths[len(s.depths)-1]++
 }
 
 func (s *scope) PushVar(name string, typ ir.Type) {
@@ -50,7 +56,7 @@ func (s *scope) FindVarByName(name string) *scopeVar {
 	})
 }
 
-func (s *scope) FindVar(predicate func(*scopeVar) bool) *scopeVar {
+func (s *scope) FindVar(predicate func(v *scopeVar) bool) *scopeVar {
 	seen := make(map[string]struct{})
 	for i := len(s.vars) - 1; i >= 0; i-- {
 		v := &s.vars[i]

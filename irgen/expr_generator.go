@@ -17,7 +17,8 @@ type exprGenerator struct {
 
 	scope *scope
 
-	symtab *symbolTable
+	symtab  *symbolTable
+	scratch []*scopeVar
 
 	exprDepth int
 
@@ -108,12 +109,12 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	}
 
 	g.condChoices = makeChoicesList(g.boolLit, []exprChoice{
+		{freq: 2, generate: g.boolFieldAccess, fallback: g.boolLit},
 		{freq: 3, generate: cmpOpGenerator(ir.OpEqual2)},
 		{freq: 3, generate: cmpOpGenerator(ir.OpEqual3)},
 		{freq: 4, generate: binaryOpGenerator(ir.OpAnd, nil, g.boolValue)},
 		{freq: 4, generate: binaryOpGenerator(ir.OpOr, nil, g.boolValue)},
 		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
-		{freq: 5, generate: g.boolVar, fallback: g.boolLit},
 		{freq: 6, generate: g.boolCall},
 		{freq: 1, generate: g.boolLit},
 	})
@@ -121,11 +122,11 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 	g.boolChoices = makeChoicesList(g.boolLit, []exprChoice{
 		{freq: 1, generate: cmpOpGenerator(ir.OpEqual2)},
 		{freq: 1, generate: cmpOpGenerator(ir.OpEqual3)},
+		{freq: 2, generate: g.boolFieldAccess, fallback: g.boolLit},
 		{freq: 3, generate: binaryOpGenerator(ir.OpAnd, nil, g.boolValue)},
 		{freq: 3, generate: binaryOpGenerator(ir.OpOr, nil, g.boolValue)},
-		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
-		{freq: 6, generate: g.boolVar, fallback: g.boolLit},
 		{freq: 3, generate: g.boolLit},
+		{freq: 4, generate: unaryOpGenerator(ir.OpNot, g.condValue)},
 		{freq: 4, generate: g.boolCall},
 	})
 
@@ -140,31 +141,31 @@ func newExprGenerator(config *Config, s *scope, symtab *symbolTable) *exprGenera
 		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpExp, ir.IntType, g.intValue), ir.IntType)},
 		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpDiv, ir.IntType, g.intValue), ir.IntType)},
 		{freq: 1, generate: withCast(binaryOpGenerator(ir.OpMod, ir.IntType, g.intValue), ir.IntType)},
+		{freq: 2, generate: g.intFieldAccess, fallback: g.intLit},
 		{freq: 2, generate: g.intNegation},
 		{freq: 2, generate: g.intCast},
 		{freq: 7, generate: g.intCall},
 		{freq: 4, generate: g.intLit},
-		{freq: 6, generate: g.intVar, fallback: g.intLit},
 	})
 
 	g.floatChoices = makeChoicesList(g.floatLit, []exprChoice{
 		{freq: 1, generate: g.floatTernary},
 		{freq: 2, generate: binaryOpGenerator(ir.OpAdd, ir.FloatType, g.floatValue)},
 		{freq: 2, generate: binaryOpGenerator(ir.OpSub, ir.FloatType, g.floatValue)},
+		{freq: 2, generate: g.floatFieldAccess, fallback: g.floatLit},
 		{freq: 1, generate: binaryOpGenerator(ir.OpDiv, ir.FloatType, g.floatValue)},
 		{freq: 1, generate: binaryOpGenerator(ir.OpMul, ir.FloatType, g.floatValue)},
 		{freq: 5, generate: g.floatCall},
-		{freq: 6, generate: g.floatVar, fallback: g.floatLit},
 		{freq: 5, generate: g.floatLit},
 	})
 
 	g.stringChoices = makeChoicesList(g.stringLit, []exprChoice{
 		{freq: 2, generate: g.stringCast},
+		{freq: 2, generate: g.stringFieldAccess, fallback: g.stringLit},
 		{freq: 5, generate: g.stringCall},
 		{freq: 4, generate: binaryOpGenerator(ir.OpConcat, ir.StringType, g.stringValue)},
 		{freq: 5, generate: g.stringLit},
 		{freq: 5, generate: g.interpolatedString},
-		{freq: 6, generate: g.stringVar, fallback: g.stringLit},
 		{freq: 2, generate: g.stringIndex, fallback: g.interpolatedString},
 	})
 
@@ -180,7 +181,7 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 		return g.PickScalarType()
 	}
 
-	switch g.rand.Intn(8 + depth*3) {
+	switch g.rand.Intn(7 + depth*3) {
 	case 0:
 		elemType := g.pickType(depth + 1)
 		return &ir.ArrayType{Elem: elemType}
@@ -191,9 +192,20 @@ func (g *exprGenerator) pickType(depth int) ir.Type {
 	case 2:
 		return g.PickEnumType()
 
+	case 3, 4:
+		return g.maybePickClassType(depth)
+
 	default:
 		return g.PickScalarType()
 	}
+}
+
+func (g *exprGenerator) maybePickClassType(depth int) ir.Type {
+	c := g.symtab.PickRandomClass()
+	if c != nil {
+		return c
+	}
+	return g.pickType(depth + 1)
 }
 
 func (g *exprGenerator) pickTupleType(depth int) ir.Type {
@@ -237,7 +249,62 @@ func (g *exprGenerator) PickScalarType() ir.Type {
 	return scalarTypes[g.rand.Intn(len(scalarTypes))]
 }
 
+func (g *exprGenerator) GenerateConstValueOfType(typ ir.Type) *ir.Node {
+	switch typ := typ.(type) {
+	case *ir.ScalarType:
+		switch typ.Kind {
+		case ir.ScalarBool:
+			return g.boolLit()
+		case ir.ScalarInt:
+			return g.intLit()
+		case ir.ScalarFloat:
+			return g.floatLit()
+		case ir.ScalarString:
+			return g.stringLit()
+		case ir.ScalarMixed:
+			return g.stringLit()
+		default:
+			panic(fmt.Sprintf("unexpected %s scalar type", typ.Kind))
+		}
+
+	case *ir.EnumType:
+		return g.enumValue(typ)
+
+	case *ir.ArrayType:
+		return g.constArrayValue(typ.Elem)
+
+	case *ir.TupleType:
+		return g.constTupleValue(typ)
+
+	case *ir.ClassType:
+		return ir.NewName("null")
+
+	default:
+		panic(fmt.Sprintf("unexpected %T type", typ))
+	}
+}
+
+func (g *exprGenerator) enumValue(typ *ir.EnumType) *ir.Node {
+	switch typ.ValueType.Kind {
+	case ir.ScalarInt:
+		return ir.NewIntLit(randutil.Elem(g.rand, typ.Values).(int64))
+	case ir.ScalarFloat:
+		return ir.NewFloatLit(randutil.Elem(g.rand, typ.Values).(float64))
+	case ir.ScalarString:
+		return ir.NewStringLit(randutil.Elem(g.rand, typ.Values).(string))
+	default:
+		panic(fmt.Sprintf("unexpected %s enum type", typ.ValueType))
+	}
+}
+
 func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
+	if randutil.Chance(g.rand, 0.4) {
+		v := g.varOfType(typ)
+		if v != nil {
+			return v
+		}
+	}
+
 	switch typ := typ.(type) {
 	case *ir.ScalarType:
 		switch typ.Kind {
@@ -256,28 +323,16 @@ func (g *exprGenerator) GenerateValueOfType(typ ir.Type) *ir.Node {
 		}
 
 	case *ir.EnumType:
-		roll := g.rand.Float64()
-		if roll < 0.6 {
-			if v := g.varOfType(typ); v != nil {
-				return v
-			}
-		}
-		switch typ.ValueType.Kind {
-		case ir.ScalarInt:
-			return ir.NewIntLit(randutil.Elem(g.rand, typ.Values).(int64))
-		case ir.ScalarFloat:
-			return ir.NewFloatLit(randutil.Elem(g.rand, typ.Values).(float64))
-		case ir.ScalarString:
-			return ir.NewStringLit(randutil.Elem(g.rand, typ.Values).(string))
-		default:
-			panic(fmt.Sprintf("unexpected %s enum type", typ.ValueType))
-		}
+		return g.enumValue(typ)
 
 	case *ir.ArrayType:
 		return g.arrayValue(typ.Elem)
 
 	case *ir.TupleType:
 		return g.tupleValue(typ)
+
+	case *ir.ClassType:
+		return g.classValue(typ)
 
 	default:
 		panic(fmt.Sprintf("unexpected %T type", typ))
@@ -379,6 +434,35 @@ func (g *exprGenerator) floatLit() *ir.Node {
 	return ir.NewFloatLit(g.valueGenerator.FloatValue())
 }
 
+func (g *exprGenerator) boolFieldAccess() *ir.Node   { return g.fieldAccessOfType(ir.BoolType) }
+func (g *exprGenerator) intFieldAccess() *ir.Node    { return g.fieldAccessOfType(ir.IntType) }
+func (g *exprGenerator) floatFieldAccess() *ir.Node  { return g.fieldAccessOfType(ir.FloatType) }
+func (g *exprGenerator) stringFieldAccess() *ir.Node { return g.fieldAccessOfType(ir.StringType) }
+
+func (g *exprGenerator) fieldAccessOfType(typ ir.Type) *ir.Node {
+	var list []fieldRef
+	switch typ := typ.(type) {
+	case *ir.ScalarType:
+		switch typ.Kind {
+		case ir.ScalarBool:
+			list = g.symtab.boolFields
+		case ir.ScalarInt:
+			list = g.symtab.intFields
+		case ir.ScalarFloat:
+			list = g.symtab.floatFields
+		case ir.ScalarString:
+			list = g.symtab.stringFields
+		}
+	}
+	if len(list) == 0 {
+		return nil
+	}
+	ref := list[g.rand.Intn(len(list))]
+	instance := g.maybeAddParens(g.GenerateValueOfType(ref.class))
+	field := ref.class.Fields[ref.index]
+	return ir.NewMemberAccess(instance, field.Name)
+}
+
 func (g *exprGenerator) interpolatedString() *ir.Node {
 	numParts := randutil.IntRange(g.rand, 3, 8)
 	n := &ir.Node{
@@ -414,11 +498,6 @@ func (g *exprGenerator) varOfType(typ ir.Type) *ir.Node {
 	return ir.NewVar(v.name, v.typ)
 }
 
-func (g *exprGenerator) boolVar() *ir.Node   { return g.varOfType(ir.BoolType) }
-func (g *exprGenerator) intVar() *ir.Node    { return g.varOfType(ir.IntType) }
-func (g *exprGenerator) floatVar() *ir.Node  { return g.varOfType(ir.FloatType) }
-func (g *exprGenerator) stringVar() *ir.Node { return g.varOfType(ir.StringType) }
-
 func (g *exprGenerator) callOfType(fn *ir.FuncType) *ir.Node {
 	g.exprDepth++
 	defer func() { g.exprDepth-- }()
@@ -432,7 +511,13 @@ func (g *exprGenerator) callOfType(fn *ir.FuncType) *ir.Node {
 		}
 		callArgs[i] = arg
 	}
-	funcExpr := ir.NewName(fn.Name)
+	var funcExpr *ir.Node
+	if fn.Class == nil {
+		funcExpr = ir.NewName(fn.Name)
+	} else {
+		instance := g.maybeAddParens(g.GenerateValueOfType(fn.Class))
+		funcExpr = ir.NewMemberAccess(instance, fn.Name)
+	}
 	result := ir.NewCall(funcExpr, callArgs...)
 	if fn.NeedCast {
 		result = &ir.Node{Op: ir.OpCast, Args: []*ir.Node{result}, Type: fn.Result}
@@ -475,19 +560,46 @@ func (g *exprGenerator) castToType(typ ir.Type) *ir.Node {
 func (g *exprGenerator) intCast() *ir.Node    { return g.castToType(ir.IntType) }
 func (g *exprGenerator) stringCast() *ir.Node { return g.castToType(ir.StringType) }
 
+func (g *exprGenerator) classValue(typ *ir.ClassType) *ir.Node {
+	g.exprDepth++
+	defer func() { g.exprDepth-- }()
+
+	return &ir.Node{
+		Op:    ir.OpNew,
+		Value: typ.Name,
+		Type:  typ,
+	}
+}
+
+func (g *exprGenerator) constTupleValue(typ *ir.TupleType) *ir.Node {
+	return g.makeTupleValue(typ, g.GenerateConstValueOfType)
+}
+
 func (g *exprGenerator) tupleValue(typ *ir.TupleType) *ir.Node {
+	return g.makeTupleValue(typ, g.GenerateValueOfType)
+}
+
+func (g *exprGenerator) makeTupleValue(typ *ir.TupleType, elemGen func(ir.Type) *ir.Node) *ir.Node {
 	g.exprDepth++
 	defer func() { g.exprDepth-- }()
 
 	numElems := len(typ.Elems)
 	elems := make([]*ir.Node, numElems)
 	for i := 0; i < numElems; i++ {
-		elems[i] = g.GenerateValueOfType(typ.Elems[i])
+		elems[i] = elemGen(typ.Elems[i])
 	}
 	return ir.NewCall(ir.NewName("tuple"), elems...)
 }
 
+func (g *exprGenerator) constArrayValue(elemType ir.Type) *ir.Node {
+	return g.makeArrayValue(elemType, g.GenerateConstValueOfType)
+}
+
 func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
+	return g.makeArrayValue(elemType, g.GenerateValueOfType)
+}
+
+func (g *exprGenerator) makeArrayValue(elemType ir.Type, elemGen func(ir.Type) *ir.Node) *ir.Node {
 	g.exprDepth++
 	defer func() { g.exprDepth-- }()
 
@@ -498,9 +610,49 @@ func (g *exprGenerator) arrayValue(elemType ir.Type) *ir.Node {
 	numElems := randutil.IntRange(g.rand, 1, maxNumElems)
 	elems := make([]*ir.Node, numElems)
 	for i := 0; i < numElems; i++ {
-		elems[i] = g.GenerateValueOfType(elemType)
+		elems[i] = elemGen(elemType)
 	}
 	return &ir.Node{Op: ir.OpArrayLit, Args: elems}
+}
+
+func (g *exprGenerator) findRandomVar(predicate func(v *scopeVar) bool) *scopeVar {
+	g.scratch = g.scratch[:0]
+	g.scope.FindVar(func(v *scopeVar) bool {
+		if !predicate(v) {
+			return false
+		}
+		g.scratch = append(g.scratch, v)
+		return false
+	})
+	if len(g.scratch) == 0 {
+		return nil
+	}
+	return randutil.Elem(g.rand, g.scratch)
+}
+
+func (g *exprGenerator) PickLvalue() (*ir.Node, ir.Type) {
+	roll := g.rand.Float64()
+
+	if roll < 0.4 {
+		classVar := g.findRandomVar(func(v *scopeVar) bool {
+			_, ok := v.typ.(*ir.ClassType)
+			return ok
+		})
+		if classVar != nil {
+			classType := classVar.typ.(*ir.ClassType)
+			if len(classType.Fields) != 0 {
+				field := randutil.Elem(g.rand, classType.Fields)
+				return ir.NewMemberAccess(ir.NewVar(classVar.name, classVar.typ), field.Name), field.Type
+			}
+		}
+	}
+
+	blockVars := g.scope.CurrentBlockVars()
+	if len(blockVars) == 0 {
+		return nil, nil
+	}
+	v := blockVars[g.rand.Intn(len(blockVars))]
+	return ir.NewVar(v.name, v.typ), v.typ
 }
 
 func (g *exprGenerator) lvalueOfType(typ ir.Type) *ir.Node {

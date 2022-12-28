@@ -1,6 +1,10 @@
 package ir
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/quasilyte/phpsmith/phpdoc"
+)
 
 type Type interface {
 	String() string
@@ -20,6 +24,7 @@ type TypeField struct {
 	Type   Type
 	Strict bool
 	Init   interface{}
+	Flags  TypeFlags
 }
 
 type ScalarKind int
@@ -57,6 +62,10 @@ type ScalarType struct {
 
 type ClassType struct {
 	Name string
+
+	Fields []TypeField
+
+	Methods []*FuncType
 }
 
 type UnionType struct {
@@ -79,9 +88,19 @@ type TupleType struct {
 type FuncType struct {
 	Name       string
 	Params     []TypeField
+	Tags       []phpdoc.Tag
 	MinArgsNum int
 	Result     Type
 	NeedCast   bool
+	IsLibFunc  bool
+	Class      *ClassType
+}
+
+func (typ *FuncType) FullName() string {
+	if typ.Class == nil {
+		return typ.Name
+	}
+	return typ.Class.Name + "::" + typ.Name
 }
 
 type EnumType struct {

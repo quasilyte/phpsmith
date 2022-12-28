@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -64,6 +65,12 @@ func (g *generator) CreateProgram() *Program {
 		{Name: "fuzzlib.php", Contents: phpFuzzlib},
 	}
 
+	numClasses := randutil.IntRange(g.rand, 7, 10)
+	for i := 0; i < numClasses; i++ {
+		filename := fmt.Sprintf("Class%d.php", i)
+		g.files = append(g.files, g.createClassFile(filename))
+		mainFileRequires = append(mainFileRequires, &ir.RootRequire{Path: filename})
+	}
 	numLibs := randutil.IntRange(g.rand, 3, 5)
 	for i := 0; i < numLibs; i++ {
 		filename := fmt.Sprintf("lib%d.php", i)
@@ -78,15 +85,60 @@ func (g *generator) CreateProgram() *Program {
 	}
 }
 
+func (g *generator) createClassFile(filename string) *File {
+	file := &File{Name: filename}
+
+	className := strings.TrimSuffix(filepath.Base(filename), ".php")
+	classType := g.createClassType(className)
+	g.symtab.AddClass(classType)
+
+	decl := &ir.RootClassDecl{
+		Type: classType,
+	}
+
+	for _, m := range classType.Methods {
+		decl.Methods = append(decl.Methods, g.createFunc(m))
+	}
+
+	file.Nodes = append(file.Nodes, decl)
+
+	return file
+}
+
+func (g *generator) createClassType(classname string) *ir.ClassType {
+	numFields := randutil.IntRange(g.rand, 3, 8)
+	numMethods := randutil.IntRange(g.rand, 3, 5)
+	c := &ir.ClassType{
+		Name:    classname,
+		Fields:  make([]ir.TypeField, numFields),
+		Methods: make([]*ir.FuncType, numMethods),
+	}
+	for i := range c.Fields {
+		field := &c.Fields[i]
+		field.Name = fmt.Sprintf("field%d", i)
+		field.Type = g.expr.PickType()
+		if canConstexprInitialize(field.Type) && randutil.Chance(g.rand, 0.8) {
+			field.Init = g.expr.GenerateConstValueOfType(field.Type)
+		}
+	}
+	for i := range c.Methods {
+		fn := g.createFuncType(fmt.Sprintf("method%d", i), true, c)
+		c.Methods[i] = fn
+		g.symtab.AddFunc(fn)
+	}
+	return c
+}
+
 func (g *generator) createLibFile(filename string) *File {
 	file := &File{Name: filename}
 
 	funcPrefix := strings.TrimSuffix(filename, ".php")
 
-	numLibFuncs := randutil.IntRange(g.rand, 2, 4)
+	numLibFuncs := randutil.IntRange(g.rand, 3, 5)
 	for i := 0; i < numLibFuncs; i++ {
 		funcName := fmt.Sprintf("%s_func%d", funcPrefix, i)
-		fn := g.createFunc(funcName, true)
+		funcType := g.createFuncType(funcName, true, nil)
+		fn := g.createFunc(funcType)
 		file.Nodes = append(file.Nodes, fn)
 		g.symtab.AddFunc(fn.Type)
 	}
@@ -105,7 +157,8 @@ func (g *generator) createMainFile(requires []*ir.RootRequire) *File {
 
 	funcs := make([]*ir.RootFuncDecl, randutil.IntRange(g.rand, 2, 4))
 	for i := range funcs {
-		funcs[i] = g.createFunc("func"+strconv.Itoa(i), false)
+		funcType := g.createFuncType("func"+strconv.Itoa(i), false, nil)
+		funcs[i] = g.createFunc(funcType)
 	}
 
 	// Create a main func.
@@ -134,16 +187,21 @@ func (g *generator) createMainFile(requires []*ir.RootRequire) *File {
 	return file
 }
 
-func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
-	fn := &ir.RootFuncDecl{
-		Body: ir.NewBlock(),
-	}
+func (g *generator) createFuncType(name string, isLibFunc bool, classType *ir.ClassType) *ir.FuncType {
+	var fn *ir.FuncType
 
 	if isLibFunc {
-		fn.Type = &ir.FuncType{
-			Result: g.expr.PickType(),
+		fn = &ir.FuncType{
+			Name:      name,
+			Result:    g.expr.PickType(),
+			Class:     classType,
+			IsLibFunc: true,
 		}
-		numParams := randutil.IntRange(g.rand, 0, 10)
+		maxParams := 10
+		if classType != nil {
+			maxParams = 6
+		}
+		numParams := randutil.IntRange(g.rand, 0, maxParams)
 		for i := 0; i < numParams; i++ {
 			paramName := fmt.Sprintf("p%d", i)
 			param := ir.TypeField{Name: paramName, Type: g.expr.PickType()}
@@ -151,23 +209,35 @@ func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 				VarName: "$" + paramName,
 				Type:    param.Type.String(),
 			})
-			fn.Type.Params = append(fn.Type.Params, param)
+			fn.Params = append(fn.Params, param)
 		}
-		fn.Type.MinArgsNum = len(fn.Type.Params)
-		fn.Tags = append(fn.Tags, &phpdoc.ReturnTag{Type: fn.Type.Result.String()})
+		fn.MinArgsNum = len(fn.Params)
+		fn.Tags = append(fn.Tags, &phpdoc.ReturnTag{Type: fn.Result.String()})
 	} else {
-		fn.Type = &ir.FuncType{
+		fn = &ir.FuncType{
 			Name:   name,
 			Result: ir.VoidType,
 		}
 	}
-	fn.Type.Name = name
+	return fn
+}
+
+func (g *generator) createFunc(funcType *ir.FuncType) *ir.RootFuncDecl {
+	fn := &ir.RootFuncDecl{
+		Body: ir.NewBlock(),
+		Type: funcType,
+	}
 
 	g.scope.Enter()
-	for _, param := range fn.Type.Params {
-		g.scope.PushVar(param.Name, param.Type)
+	if funcType.Class != nil {
+		g.scope.PushParam("this", funcType.Class)
 	}
+	for _, param := range fn.Type.Params {
+		g.scope.PushParam(param.Name, param.Type)
+	}
+	g.scope.Enter()
 	defer func() {
+		g.scope.Leave()
 		g.scope.Leave()
 		if len(g.scope.depths) != 0 {
 			panic("corrupted scope stack?")
@@ -177,19 +247,26 @@ func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 	g.varNameSeq = 0
 	g.currentBlock = fn.Body
 
+	if funcType.IsLibFunc {
+		call := ir.NewCall(ir.NewName("_visit_function"), ir.NewStringLit(fn.Type.FullName()))
+		ret := ir.NewReturn(g.expr.GenerateConstValueOfType(fn.Type.Result))
+		funcCallGuard := ir.NewIf(ir.NewNot(call), ret)
+		g.currentBlock.Args = append(g.currentBlock.Args, funcCallGuard)
+	}
+
 	numBlockVars := 0
-	if isLibFunc {
+	if funcType.IsLibFunc {
 		numBlockVars = randutil.IntRange(g.rand, 0, 2)
 	} else {
 		numBlockVars = randutil.IntRange(g.rand, 3, 7)
 	}
 	blockVars := make([]string, numBlockVars)
 	for i := range blockVars {
-		blockVars[i] = g.genVarname()
+		blockVars[i] = g.genVarname(false)
 		g.pushVarDecl(blockVars[i])
 	}
 	numStatements := 0
-	if isLibFunc {
+	if funcType.IsLibFunc {
 		numStatements = randutil.IntRange(g.rand, 1, 3)
 	} else {
 		numStatements = randutil.IntRange(g.rand, 3, 10)
@@ -198,7 +275,7 @@ func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 		g.pushStatement()
 	}
 
-	if isLibFunc {
+	if funcType.IsLibFunc {
 		ret := ir.NewReturn(g.expr.GenerateValueOfType(fn.Type.Result))
 		g.currentBlock.Args = append(g.currentBlock.Args, ret)
 	} else {
@@ -214,8 +291,13 @@ func (g *generator) createFunc(name string, isLibFunc bool) *ir.RootFuncDecl {
 	return fn
 }
 
-func (g *generator) genVarname() string {
-	varname := "v" + strconv.Itoa(g.varNameSeq)
+func (g *generator) genVarname(internal bool) string {
+	var varname string
+	if internal {
+		varname = "_iv" + strconv.Itoa(g.varNameSeq)
+	} else {
+		varname = "v" + strconv.Itoa(g.varNameSeq)
+	}
 	g.varNameSeq++
 	return varname
 }
@@ -268,7 +350,7 @@ func (g *generator) pushStatement() {
 	case 8:
 		g.pushSwitchStmt()
 	default:
-		g.pushVarDecl(g.genVarname())
+		g.pushVarDecl(g.genVarname(false))
 	}
 }
 
@@ -333,7 +415,7 @@ func (g *generator) pushLoopStmt() {
 	g.insideLoop = true
 	g.scope.Enter()
 
-	iterVarName := g.genVarname()
+	iterVarName := g.genVarname(true)
 	iterVar := ir.NewVar(iterVarName, ir.IntType)
 	iterVarAssign := ir.NewAssign(iterVar, ir.NewIntLit(0))
 	g.currentBlock.Args = append(g.currentBlock.Args, iterVarAssign)
@@ -351,13 +433,13 @@ func (g *generator) pushLoopStmt() {
 }
 
 func (g *generator) pushAssignStmt() {
-	v := g.pickVar()
-	if v == nil {
-		g.pushVarDecl(g.genVarname())
+	lhs, typ := g.expr.PickLvalue()
+	if lhs == nil {
+		g.pushVarDecl(g.genVarname(false))
 		return
 	}
 	var op ir.Op
-	if typ, ok := v.typ.(*ir.ScalarType); ok && randutil.Bool(g.rand) {
+	if typ, ok := typ.(*ir.ScalarType); ok && randutil.Bool(g.rand) {
 		var opChoice []ir.Op
 		switch typ.Kind {
 		case ir.ScalarInt, ir.ScalarFloat:
@@ -372,8 +454,7 @@ func (g *generator) pushAssignStmt() {
 		}
 	}
 	var assign *ir.Node
-	lhs := ir.NewVar(v.name, v.typ)
-	rhs := g.expr.GenerateValueOfType(v.typ)
+	rhs := g.expr.GenerateValueOfType(typ)
 	if op != ir.OpInvalid {
 		assign = ir.NewAssignModify(op, lhs, rhs)
 	} else {
@@ -427,12 +508,4 @@ func (g *generator) pushIfStmt() {
 
 	g.scope.Leave()
 	g.currentBlock = oldBlock
-}
-
-func (g *generator) pickVar() *scopeVar {
-	blockVars := g.scope.CurrentBlockVars()
-	if len(blockVars) == 0 {
-		return nil
-	}
-	return &blockVars[g.rand.Intn(len(blockVars))]
 }

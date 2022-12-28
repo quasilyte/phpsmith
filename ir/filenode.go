@@ -1,9 +1,5 @@
 package ir
 
-import (
-	"github.com/quasilyte/phpsmith/phpdoc"
-)
-
 type RootNode interface {
 	rootNode()
 }
@@ -19,11 +15,16 @@ type RootStmt struct {
 type RootFuncDecl struct {
 	Type *FuncType
 
-	Tags []phpdoc.Tag
-
 	Body *Node
 }
 
-func (n *RootRequire) rootNode()  {}
-func (n *RootStmt) rootNode()     {}
-func (n *RootFuncDecl) rootNode() {}
+type RootClassDecl struct {
+	Type *ClassType
+
+	Methods []*RootFuncDecl
+}
+
+func (n *RootRequire) rootNode()   {}
+func (n *RootStmt) rootNode()      {}
+func (n *RootFuncDecl) rootNode()  {}
+func (n *RootClassDecl) rootNode() {}
