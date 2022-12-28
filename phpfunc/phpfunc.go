@@ -164,7 +164,7 @@ var funcList = []*ir.FuncType{
 		Name: "str_split",
 		Params: []ir.TypeField{
 			{Name: "str", Type: ir.StringType},
-			{Name: "split_length", Type: ir.IntType, Init: 1},
+			{Name: "split_length", Type: ir.IntType, Init: 1, Flags: ir.FlagIntGtZero},
 		},
 		Result: &ir.ArrayType{Elem: ir.StringType},
 	},
@@ -845,7 +845,7 @@ var funcList = []*ir.FuncType{
 	{
 		Name: "explode",
 		Params: []ir.TypeField{
-			{Name: "delimiter", Type: ir.StringType},
+			{Name: "delimiter", Type: ir.StringType, Flags: ir.FlagStringNonEmpty},
 			{Name: "str", Type: ir.StringType},
 			{Name: "limit", Type: ir.IntType, Init: 9223372036854775807},
 		},
